@@ -42,6 +42,12 @@
     "package": "vsce package --no-dependencies --allow-missing-repository --skip-license"
   },
   "dependencies": {
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/merge": "^6.12.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
+    "@lezer/highlight": "^1.2.5",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
