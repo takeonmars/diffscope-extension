@@ -2,7 +2,7 @@
 // разделителем «⋯ N строк скрыто»; клик раскрывает его (в обеих колонках — через onExpand).
 import { StateEffect, StateField, type Extension, type Text } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
-import type { CollapsedRegion, Side } from './model';
+import type { CollapsedRegion, Side } from '../../../shared/diffModel';
 
 /** Какие участки (по id) сейчас свёрнуты. */
 export const setCollapsed = StateEffect.define<ReadonlySet<number>>();

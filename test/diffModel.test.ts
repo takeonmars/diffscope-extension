@@ -12,7 +12,7 @@ import {
   ribbonPath,
   statsBlocks,
   type LineChunk,
-} from '../webview/src/diff/model';
+} from '../shared/diffModel';
 
 const doc = (...lines: string[]) => Text.of(lines);
 const ranges = (chunks: LineChunk[]) =>

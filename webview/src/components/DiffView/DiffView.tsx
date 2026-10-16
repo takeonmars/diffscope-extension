@@ -5,10 +5,11 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { AlignedDiff } from '../../diff/aligned';
 import { languageFor } from '../../diff/languages';
-import { diffStats, prepareDiff } from '../../diff/model';
+import { diffStats, prepareDiff } from '../../../../shared/diffModel';
 import { SideBySideDiff } from '../../diff/sideBySide';
 import { UnifiedDiff } from '../../diff/unified';
 import { editorTheme } from '../../theme/codemirror';
+import type { FragmentConfig } from '../../diff/fragment';
 
 /** Строк контекста вокруг изменений; позже — настройка расширения. */
 const CONTEXT_LINES = 4;
@@ -30,6 +31,7 @@ interface DiffInstance {
   readonly chunkCount: number;
   navigate(dir: 1 | -1): void;
   setWholeFile(whole: boolean): void;
+  setSplit(ratio: number): void;
   destroy(): void;
 }
 
@@ -40,6 +42,14 @@ interface Props {
   mode: DiffMode;
   dark: boolean;
   wholeFile: boolean;
+  /** Сдвиг номеров строк колонок (режим «Только выделенные строки»). */
+  lineOffset?: { a: number; b: number };
+  /** Фрагмент истории: подсветка и прокрутка к нему. */
+  fragment?: FragmentConfig;
+  /** Доля ширины левой колонки. */
+  split: number;
+  /** Разделитель отпустили. */
+  onSplitChange?: (ratio: number) => void;
   controller?: RefObject<DiffController | null>;
   onSummary?: (summary: DiffSummary) => void;
   onCurrentChunk?: (index: number | undefined) => void;
@@ -47,6 +57,9 @@ interface Props {
 
 export function DiffView(props: Props) {
   const { a, b, path, mode, dark, wholeFile, controller } = props;
+  // Объекты сравниваются по содержимому: новый объект с теми же числами не пересоздаёт дифф.
+  const offsetKey = JSON.stringify(props.lineOffset ?? null);
+  const fragmentKey = JSON.stringify(props.fragment ?? null);
   const host = useRef<HTMLDivElement>(null);
   const diffRef = useRef<DiffInstance | null>(null);
   // Колбэки и wholeFile читаются через ref, чтобы их смена не пересоздавала дифф.
@@ -64,6 +77,10 @@ export function DiffView(props: Props) {
         extensions: [editorTheme(dark), language],
         wholeFile: latest.current.wholeFile,
         context: CONTEXT_LINES,
+        lineOffset: latest.current.lineOffset,
+        fragment: latest.current.fragment,
+        split: latest.current.split,
+        onSplitChange: (ratio: number) => latest.current.onSplitChange?.(ratio),
         onCurrentChunk: (index: number | undefined) => latest.current.onCurrentChunk?.(index),
       };
       const parent = host.current!;
@@ -84,11 +101,15 @@ export function DiffView(props: Props) {
       diffRef.current = null;
       if (controller) controller.current = null;
     };
-  }, [prepared, path, mode, dark, controller]);
+  }, [prepared, path, mode, dark, controller, offsetKey, fragmentKey]);
 
   useEffect(() => {
     diffRef.current?.setWholeFile(wholeFile);
   }, [wholeFile]);
+
+  useEffect(() => {
+    diffRef.current?.setSplit(props.split);
+  }, [props.split]);
 
   return <div className="diff-view" ref={host} />;
 }

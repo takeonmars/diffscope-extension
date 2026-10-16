@@ -18,6 +18,7 @@ function fakeHandlers(overrides: Partial<Handlers> = {}): Handlers {
     load: async () => data,
     pickRef: async () => ({ changed: false }),
     swap: async () => null,
+    saveLayout: async () => null,
     ...overrides,
   };
 }

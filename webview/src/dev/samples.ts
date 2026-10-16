@@ -4,6 +4,8 @@ export interface Sample {
   name: string;
   a: string;
   b: string;
+  /** Как у истории по строкам: фрагмент в обеих версиях. */
+  fragment?: { left: { from: number; to: number }; right: { from: number; to: number } };
 }
 
 const smallA = `import { readFile } from 'node:fs/promises';
@@ -155,4 +157,10 @@ export const samples: Sample[] = [
   { name: 'Небольшой файл', a: smallA, b: smallB },
   generateLarge(100),
   { name: 'Без изменений', a: smallA, b: smallA },
+  {
+    name: 'История по строкам (loadConfig)',
+    a: smallA,
+    b: smallB,
+    fragment: { left: { from: 13, to: 16 }, right: { from: 16, to: 20 } },
+  },
 ];

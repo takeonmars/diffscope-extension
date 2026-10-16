@@ -21,9 +21,10 @@
   --ds-kind-inserted: var(--vscode-editorGutter-addedBackground, #2ea043);
   --ds-kind-modified: var(--vscode-editorGutter-modifiedBackground, #0078d4);
   --ds-kind-deleted: var(--vscode-editorGutter-deletedBackground, #f85149);
-  --ds-line-alpha: 14%;
-  --ds-inline-alpha: 32%;
-  --ds-ribbon-stroke-alpha: 55%;
+  /* Насыщенность: фон блока и ленты, изменения внутри строки, контур ленты. */
+  --ds-line-alpha: 24%;
+  --ds-inline-alpha: 50%;
+  --ds-ribbon-stroke-alpha: 85%;
 
   --ds-font: var(--vscode-font-family, system-ui, sans-serif);
   --ds-font-size: var(--vscode-font-size, 13px);
@@ -46,8 +47,8 @@ body.vscode-high-contrast {
   --ds-syntax-number: #b5cea8;
   --ds-syntax-type: #4ec9b0;
   --ds-syntax-function: #dcdcaa;
-  --ds-line-alpha: 18%;
-  --ds-inline-alpha: 38%;
+  --ds-line-alpha: 28%;
+  --ds-inline-alpha: 55%;
 }
 
 * {
@@ -262,6 +263,7 @@ select {
 
 .ds-sbs__gap {
   position: relative;
+  cursor: col-resize;
   overflow: hidden;
   border-left: 1px solid var(--ds-border);
   border-right: 1px solid var(--ds-border);
@@ -347,7 +349,7 @@ select {
 /* Сетка совпадает с колонками диффа: колонка, промежуток с лентами, колонка. */
 .revision-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
   align-items: center;
   padding: 3px 0;
   border-bottom: 1px solid var(--ds-border);
@@ -356,7 +358,7 @@ select {
 
 .revision-bar__swap {
   justify-self: center;
-  padding: 2px 8px;
+  padding: 2px 4px;
   background: transparent;
 }
 
@@ -506,8 +508,26 @@ select {
   background: color-mix(in srgb, var(--ds-kind) var(--ds-line-alpha), transparent);
 }
 
-.ds-aligned .cm-mergeViewEditor + .cm-mergeViewEditor {
-  border-left: 1px solid var(--ds-border);
+/* Колонки MergeView делят ширину по доле, а не по длине строк: длинные строки прокручиваются
+   внутри своей колонки. Между колонками — разделитель. */
+.ds-aligned .cm-mergeViewEditor {
+  min-width: 0;
+}
+
+.ds-splitter {
+  flex: none;
+  cursor: col-resize;
+  background: var(--ds-border);
+  /* Видна линия в 1px, захватить можно за 9px. */
+  border-left: 4px solid var(--ds-bg);
+  border-right: 4px solid var(--ds-bg);
+  box-sizing: content-box;
+  width: 1px;
+}
+
+.ds-splitter:hover,
+.ds-resizing .ds-splitter {
+  background: var(--ds-focus);
 }
 
 .ds-aligned .cm-merge-a .cm-gutters .cm-changedLineGutter {
@@ -529,4 +549,28 @@ select {
 .revision__path {
   flex: none;
   color: var(--ds-kind-modified);
+}
+
+/* История по строкам: фрагмент — рамка слева, место пустого фрагмента — линия. */
+.cm-line.ds-fragment {
+  box-shadow: inset 3px 0 0 0 var(--ds-focus);
+}
+
+.cm-line.ds-fragment-gap-before {
+  box-shadow: inset 0 2px 0 0 var(--ds-focus);
+}
+
+.cm-line.ds-fragment-gap-after {
+  box-shadow: inset 0 -2px 0 0 var(--ds-focus);
+}
+
+/* Пока тянут разделитель — без выделения текста и с курсором по всей вкладке. */
+.ds-resizing,
+.ds-resizing * {
+  user-select: none;
+  cursor: col-resize !important;
+}
+
+.ds-sbs__gap:hover {
+  background: color-mix(in srgb, var(--ds-focus) 8%, transparent);
 }

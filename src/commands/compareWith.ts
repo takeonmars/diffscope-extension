@@ -28,7 +28,7 @@ export async function compareWith(
     }
     const path = await repoPath(repo.root, target.fsPath);
     const { left, right } = await defaultRevisions(repo.root, path);
-    openDiffPanel(context, log, { root: repo.root, path, uri: target, left, right });
+    openDiffPanel(context, log, { root: repo.root, path, left, right });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log.error(`Сравнить с…: ${message}`);

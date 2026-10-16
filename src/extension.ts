@@ -1,11 +1,23 @@
 import * as vscode from 'vscode';
 import { compareWith } from './commands/compareWith';
+import { showLineHistory } from './commands/showLineHistory';
+import type { HistoryItem } from './features/lineHistory';
 import { setGitPath, setGitTrace } from './git/runner';
+import { HistoryView } from './views/historyView';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('DiffScope', { log: true });
+  const history = new HistoryView(context, log);
   context.subscriptions.push(
     log,
+    history,
+    vscode.commands.registerCommand('diffscope.showLineHistory', (uri?: vscode.Uri) =>
+      showLineHistory(history, log, uri),
+    ),
+    vscode.commands.registerCommand('diffscope.history.stop', () => history.stop()),
+    vscode.commands.registerCommand('diffscope.history.openInNewTab', (item: HistoryItem) =>
+      history.open(item, true),
+    ),
     vscode.commands.registerCommand('diffscope.compareWith', (uri?: vscode.Uri) =>
       compareWith(context, log, uri),
     ),

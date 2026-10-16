@@ -2,14 +2,19 @@
 // блоки — по нашему диффу по строкам (lineDiffOverride), без кнопок принятия изменений.
 import { getChunks, unifiedMergeView } from '@codemirror/merge';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
-import { EditorView, lineNumbers } from '@codemirror/view';
-import { lineDiffOverride, navigationTarget, type PreparedDiff } from './model';
+import { EditorView } from '@codemirror/view';
+import { fragmentHighlight, numbering, type FragmentConfig } from './fragment';
+import { lineDiffOverride, navigationTarget, type PreparedDiff } from '../../../shared/diffModel';
 
 export interface UnifiedConfig {
   prepared: PreparedDiff;
   extensions: Extension;
   wholeFile: boolean;
   context: number;
+  /** Сдвиг номеров строк колонок (режим «Только фрагмент»). */
+  lineOffset?: { a: number; b: number };
+  /** История по строкам: фрагмент подсвечивается, дифф прокручивается к нему. */
+  fragment?: FragmentConfig;
   onCurrentChunk?: (index: number | undefined) => void;
 }
 
@@ -36,8 +41,9 @@ export class UnifiedDiff {
       state: EditorState.create({
         doc: config.prepared.docB,
         extensions: [
-          lineNumbers(),
+          numbering(config.lineOffset?.b),
           EditorState.readOnly.of(true),
+          fragmentHighlight(config.fragment?.b, config.prepared.docB),
           // Разделитель свёрнутого участка — по-русски, без склонения (фраза одна на все числа).
           EditorState.phrases.of({ '$ unchanged lines': '⋯ скрыто строк: $' }),
           config.extensions,
@@ -47,6 +53,20 @@ export class UnifiedDiff {
     });
     this.view.scrollDOM.addEventListener('scroll', () => this.onScroll(), { passive: true });
     this.scheduleUpdate();
+    const fragment = config.fragment;
+    if (fragment) requestAnimationFrame(() => this.revealLine(fragment.b.from));
+  }
+
+  /** Строка (с 1) — на линию чтения. */
+  revealLine(line: number): void {
+    const doc = this.view.state.doc;
+    const pos = doc.line(Math.min(Math.max(line, 1), doc.lines)).from;
+    const s = this.view.scrollDOM;
+    const offset = this.view.documentTop - s.getBoundingClientRect().top + s.scrollTop;
+    s.scrollTop = Math.max(
+      0,
+      this.view.lineBlockAt(pos).top + offset - s.clientHeight * READING_LINE,
+    );
   }
 
   get chunkCount(): number {
@@ -58,6 +78,9 @@ export class UnifiedDiff {
     this.view.destroy();
     this.dom.remove();
   }
+
+  /** Одна колонка — делить нечего. */
+  setSplit(): void {}
 
   setWholeFile(whole: boolean): void {
     this.view.dispatch({ effects: this.merge.reconfigure(this.mergeExtension(whole)) });

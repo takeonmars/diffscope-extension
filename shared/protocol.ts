@@ -20,11 +20,19 @@ export interface DiffSide {
   content: SideContent;
 }
 
+/** Строки с 1, включительно; пустой диапазон — `to = from - 1` (место между строками). */
+export interface LineRange {
+  from: number;
+  to: number;
+}
+
 export interface DiffData {
   /** Путь файла в репозитории. */
   path: string;
   left: DiffSide;
   right: DiffSide;
+  /** История по строкам: фрагмент в обеих версиях — подсвечивается, к нему прокручивается дифф. */
+  fragment?: { left: LineRange; right: LineRange };
 }
 
 /** Запросы вкладки: тип → параметры и результат. */
@@ -35,6 +43,8 @@ export interface RequestMap {
   pickRef: { params: { side: SideName }; result: { changed: boolean } };
   /** Поменять стороны местами. */
   swap: { params: Record<string, never>; result: null };
+  /** Запомнить раскладку для всех вкладок: доля ширины левой колонки. */
+  saveLayout: { params: Layout; result: null };
 }
 
 export type RequestType = keyof RequestMap;
@@ -52,7 +62,16 @@ export type WebviewToExtension =
   | { kind: 'ready' };
 
 /** События расширения без запроса. */
-export type ExtensionEvent = { type: 'init'; title: string };
+/** Раскладка вкладки, общая для всех вкладок. */
+export interface Layout {
+  /** Доля ширины левой колонки, 0.15–0.85. */
+  split: number;
+}
+
+export type ExtensionEvent =
+  | { type: 'init'; title: string; layout?: Layout }
+  /** Вкладка показывает другой файл или другие ревизии — загрузить заново. */
+  | { type: 'reload' };
 
 export type ExtensionToWebview =
   | { kind: 'result'; id: number; result: unknown }

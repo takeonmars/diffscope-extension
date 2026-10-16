@@ -2,7 +2,9 @@
 // SVG с лентами, соединяющими соответствующие блоки; прокрутка синхронизируется по блокам.
 // Неизменённые участки сворачиваются; навигация по блокам; метки блоков у полос прокрутки.
 import { EditorState, type Extension, type Text } from '@codemirror/state';
-import { EditorView, lineNumbers } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
+import { fragmentHighlight, numbering, type FragmentConfig } from './fragment';
+import { attachSplitter, clampSplit, DEFAULT_SPLIT, GAP_WIDTH } from './splitter';
 import { collapseUnchanged, setCollapsed } from './collapse';
 import { chunkHighlight } from './highlight';
 import {
@@ -14,7 +16,7 @@ import {
   type LineChunk,
   type PreparedDiff,
   type Side,
-} from './model';
+} from '../../../shared/diffModel';
 
 export interface SideBySideConfig {
   prepared: PreparedDiff;
@@ -24,12 +26,19 @@ export interface SideBySideConfig {
   wholeFile: boolean;
   /** Строк контекста вокруг изменений при свёрнутом неизменённом. */
   context: number;
+  /** Сдвиг номеров строк колонок (режим «Только фрагмент»). */
+  lineOffset?: { a: number; b: number };
+  /** История по строкам: фрагмент подсвечивается, дифф прокручивается к нему. */
+  fragment?: FragmentConfig;
+  /** Доля ширины левой колонки. */
+  split?: number;
+  /** Разделитель отпустили — запомнить долю. */
+  onSplitChange?: (ratio: number) => void;
   /** Текущий блок (у линии чтения или последний выбранный навигацией) изменился. */
   onCurrentChunk?: (index: number | undefined) => void;
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const GAP_WIDTH = 48;
 /** Линия чтения — доля высоты экрана: сюда ставится блок при навигации. */
 const READING_LINE = 1 / 3;
 
@@ -52,13 +61,23 @@ export class SideBySideDiff {
   private readonly onCurrentChunk?: (index: number | undefined) => void;
   private readonly resizeObserver: ResizeObserver;
   private frame = 0;
+  private readonly detachSplitter: () => void;
   private rulersDirty = true;
 
   constructor(parent: HTMLElement, config: SideBySideConfig) {
     const { docA, docB, chunks } = config.prepared;
     this.chunks = chunks;
     // Без изменений смотреть нечего — файл показывается целиком, сворачивать нечего.
-    this.regions = chunks.length ? collapsedRegions(chunks, docA.lines, config.context) : [];
+    const fragment = config.fragment;
+    // Фрагмент истории не сворачивается: участки, которые его задевают, остаются раскрытыми.
+    this.regions = (
+      chunks.length ? collapsedRegions(chunks, docA.lines, config.context) : []
+    ).filter(
+      (r) =>
+        !fragment ||
+        ((r.aTo < fragment.a.from - 1 || r.aFrom > fragment.a.to) &&
+          (r.bTo < fragment.b.from - 1 || r.bFrom > fragment.b.to)),
+    );
     this.collapsed = new Set(config.wholeFile ? [] : this.regions.map((r) => r.id));
     this.onCurrentChunk = config.onCurrentChunk;
 
@@ -71,6 +90,15 @@ export class SideBySideDiff {
     this.rulers = { a: el('div', 'ds-ruler'), b: el('div', 'ds-ruler') };
     this.dom.append(paneA, this.gap, paneB);
     this.dom.style.setProperty('--ds-gap-width', `${GAP_WIDTH}px`);
+    this.setSplit(config.split ?? DEFAULT_SPLIT);
+    // Промежуток с лентами — он же разделитель колонок.
+    this.gap.title = 'Потяните, чтобы изменить ширину колонок; двойной клик — поровну';
+    this.detachSplitter = attachSplitter(
+      this.gap,
+      this.dom,
+      (ratio) => this.setSplit(ratio),
+      (ratio) => config.onSplitChange?.(ratio),
+    );
     parent.append(this.dom);
 
     const redraw = EditorView.updateListener.of((update) => {
@@ -87,8 +115,9 @@ export class SideBySideDiff {
         state: EditorState.create({
           doc,
           extensions: [
-            lineNumbers(),
+            numbering(config.lineOffset?.[side]),
             EditorState.readOnly.of(true),
+            fragmentHighlight(config.fragment?.[side], doc),
             config.extensions,
             chunkHighlight(side, this.chunks, doc),
             collapseUnchanged(side, this.regions, this.collapsed, (id) => this.expand(id)),
@@ -108,14 +137,39 @@ export class SideBySideDiff {
     });
     this.resizeObserver.observe(this.dom);
     this.scheduleDraw();
+    if (fragment) requestAnimationFrame(() => this.revealLines(fragment.a.from, fragment.b.from));
+  }
+
+  /** Строки (с 1) обеих колонок — на линию чтения. */
+  revealLines(lineA: number, lineB: number): void {
+    for (const [side, line] of [
+      ['a', lineA],
+      ['b', lineB],
+    ] as const) {
+      const view = this.view(side);
+      const s = view.scrollDOM;
+      const index = Math.min(Math.max(line - 1, 0), view.state.doc.lines);
+      const target =
+        boundaryHeight(view, index) + documentOffset(view) - s.clientHeight * READING_LINE;
+      s.scrollTop = Math.max(0, target);
+      this.expectedScroll.set(side, s.scrollTop);
+    }
+    this.scheduleDraw();
   }
 
   get chunkCount(): number {
     return this.chunks.length;
   }
 
+  /** Доля ширины левой колонки (промежуток с лентами — между ними). */
+  setSplit(ratio: number): void {
+    const r = clampSplit(ratio);
+    this.dom.style.gridTemplateColumns = `minmax(0, ${r}fr) ${GAP_WIDTH}px minmax(0, ${1 - r}fr)`;
+  }
+
   destroy(): void {
     cancelAnimationFrame(this.frame);
+    this.detachSplitter();
     this.resizeObserver.disconnect();
     this.a.destroy();
     this.b.destroy();

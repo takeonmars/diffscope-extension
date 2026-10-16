@@ -14,7 +14,8 @@
   ],
   "main": "./dist/extension.js",
   "files": [
-    "dist"
+    "dist",
+    "media"
   ],
   "activationEvents": [],
   "contributes": {
@@ -22,6 +23,23 @@
       {
         "command": "diffscope.compareWith",
         "title": "Сравнить с…",
+        "category": "DiffScope"
+      },
+      {
+        "command": "diffscope.showLineHistory",
+        "title": "Показать историю",
+        "category": "DiffScope",
+        "icon": "$(history)"
+      },
+      {
+        "command": "diffscope.history.stop",
+        "title": "Остановить поиск",
+        "category": "DiffScope",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "diffscope.history.openInNewTab",
+        "title": "Открыть в новой вкладке",
         "category": "DiffScope"
       }
     ],
@@ -31,6 +49,11 @@
           "command": "diffscope.compareWith",
           "when": "!explorerResourceIsFolder && resourceScheme == file",
           "group": "3_compare@10"
+        },
+        {
+          "command": "diffscope.showLineHistory",
+          "when": "!explorerResourceIsFolder && resourceScheme == file",
+          "group": "3_compare@11"
         }
       ],
       "editor/title/context": [
@@ -38,9 +61,19 @@
           "command": "diffscope.compareWith",
           "when": "resourceScheme == file",
           "group": "3_compare@10"
+        },
+        {
+          "command": "diffscope.showLineHistory",
+          "when": "resourceScheme == file",
+          "group": "3_compare@11"
         }
       ],
       "editor/context": [
+        {
+          "command": "diffscope.showLineHistory",
+          "when": "resourceScheme == file",
+          "group": "9_cutcopypaste@99"
+        },
         {
           "command": "diffscope.compareWith",
           "when": "resourceScheme == file",
@@ -51,8 +84,66 @@
         {
           "command": "diffscope.compareWith",
           "when": "resourceScheme == file"
+        },
+        {
+          "command": "diffscope.showLineHistory",
+          "when": "editorIsOpen && resourceScheme == file"
+        },
+        {
+          "command": "diffscope.history.stop",
+          "when": "diffscope.historyLoading"
+        },
+        {
+          "command": "diffscope.history.openInNewTab",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "diffscope.history.stop",
+          "when": "view == diffscope.history && diffscope.historyLoading",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "diffscope.history.openInNewTab",
+          "when": "view == diffscope.history"
         }
       ]
+    },
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "diffscope",
+          "title": "DiffScope",
+          "icon": "media/diffscope.svg"
+        }
+      ]
+    },
+    "views": {
+      "diffscope": [
+        {
+          "id": "diffscope.history",
+          "name": "История"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "diffscope.history",
+        "contents": "Выделите строки в редакторе и выберите «DiffScope: Показать историю» в контекстном меню — здесь появятся коммиты, которые их меняли. Без выделения — история всего файла.\n[Показать историю](command:diffscope.showLineHistory)"
+      }
+    ],
+    "configuration": {
+      "title": "DiffScope",
+      "properties": {
+        "diffscope.history.firstParent": {
+          "type": "boolean",
+          "default": false,
+          "description": "История строк и файла: идти только по первому родителю merge-коммитов (основной ветке). Выключено — видны и коммиты влитых веток, в том числе тот, где строки появились."
+        }
+      }
     }
   },
   "scripts": {

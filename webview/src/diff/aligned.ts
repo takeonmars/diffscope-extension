@@ -3,15 +3,24 @@
 // строк — от MergeView.
 import { MergeView } from '@codemirror/merge';
 import { EditorState, type Extension } from '@codemirror/state';
-import { lineNumbers } from '@codemirror/view';
+import { fragmentHighlight, numbering, type FragmentConfig } from './fragment';
+import { attachSplitter, clampSplit, DEFAULT_SPLIT } from './splitter';
 import { chunkHighlight } from './highlight';
-import { lineDiffOverride, navigationTarget, type PreparedDiff } from './model';
+import { lineDiffOverride, navigationTarget, type PreparedDiff } from '../../../shared/diffModel';
 
 export interface AlignedConfig {
   prepared: PreparedDiff;
   extensions: Extension;
   wholeFile: boolean;
   context: number;
+  /** Сдвиг номеров строк колонок (режим «Только фрагмент»). */
+  lineOffset?: { a: number; b: number };
+  /** История по строкам: фрагмент подсвечивается, дифф прокручивается к нему. */
+  fragment?: FragmentConfig;
+  /** Доля ширины левой колонки. */
+  split?: number;
+  /** Разделитель отпустили — запомнить долю. */
+  onSplitChange?: (ratio: number) => void;
   onCurrentChunk?: (index: number | undefined) => void;
 }
 
@@ -23,21 +32,22 @@ export class AlignedDiff {
   private navigatedScroll: number | undefined;
   private current: number | undefined;
   private frame = 0;
+  private readonly editors: HTMLElement[];
+  private readonly detachSplitter: () => void;
 
   constructor(
     parent: HTMLElement,
     private readonly config: AlignedConfig,
   ) {
-    const { docA, docB, chunks } = config.prepared;
+    const { docA, docB } = config.prepared;
     const base = [
-      lineNumbers(),
       EditorState.readOnly.of(true),
       EditorState.phrases.of({ '$ unchanged lines': '⋯ скрыто строк: $' }),
       config.extensions,
     ];
     this.merge = new MergeView({
-      a: { doc: docA, extensions: [base, chunkHighlight('a', chunks, docA)] },
-      b: { doc: docB, extensions: [base, chunkHighlight('b', chunks, docB)] },
+      a: { doc: docA, extensions: [base, this.side('a')] },
+      b: { doc: docB, extensions: [base, this.side('b')] },
       parent,
       gutter: true,
       highlightChanges: false,
@@ -45,16 +55,61 @@ export class AlignedDiff {
       collapseUnchanged: this.collapse(config.wholeFile),
     });
     this.merge.dom.classList.add('ds-aligned');
+    // Разделитель между колонками MergeView: тянется, двойной клик — поровну.
+    this.editors = [...this.merge.dom.querySelectorAll<HTMLElement>('.cm-mergeViewEditor')];
+    const handle = document.createElement('div');
+    handle.className = 'ds-splitter';
+    handle.title = 'Потяните, чтобы изменить ширину колонок; двойной клик — поровну';
+    this.editors[1].before(handle);
+    this.setSplit(config.split ?? DEFAULT_SPLIT);
+    this.detachSplitter = attachSplitter(
+      handle,
+      this.merge.dom,
+      (ratio) => this.setSplit(ratio),
+      (ratio) => config.onSplitChange?.(ratio),
+    );
     this.merge.dom.addEventListener('scroll', () => this.onScroll(), { passive: true });
     this.scheduleUpdate();
+    const fragment = config.fragment;
+    if (fragment) requestAnimationFrame(() => this.revealLine(fragment.b.from));
+  }
+
+  /** Строка (с 1) правой колонки — на линию чтения; колонки выровнены, левая встанет рядом. */
+  revealLine(line: number): void {
+    const b = this.merge.b;
+    const pos = b.state.doc.line(Math.min(Math.max(line, 1), b.state.doc.lines)).from;
+    const offset =
+      b.documentTop - this.merge.dom.getBoundingClientRect().top + this.merge.dom.scrollTop;
+    this.merge.dom.scrollTop = Math.max(
+      0,
+      b.lineBlockAt(pos).top + offset - this.merge.dom.clientHeight * READING_LINE,
+    );
+  }
+
+  private side(side: 'a' | 'b') {
+    const { prepared, lineOffset, fragment } = this.config;
+    const doc = side === 'a' ? prepared.docA : prepared.docB;
+    return [
+      numbering(lineOffset?.[side]),
+      chunkHighlight(side, prepared.chunks, doc),
+      fragmentHighlight(fragment?.[side], doc),
+    ];
   }
 
   get chunkCount(): number {
     return this.merge.chunks.length;
   }
 
+  /** Доля ширины левой колонки; длинные строки прокручиваются внутри своей колонки. */
+  setSplit(ratio: number): void {
+    const r = clampSplit(ratio);
+    this.editors[0].style.flex = `${r} 1 0`;
+    this.editors[1].style.flex = `${1 - r} 1 0`;
+  }
+
   destroy(): void {
     cancelAnimationFrame(this.frame);
+    this.detachSplitter();
     this.merge.destroy();
   }
 

@@ -1,8 +1,11 @@
 // Ревизии над колонками: кнопка слева и справа открывает выбор ревизии (QuickPick VS Code),
 // между ними — «Поменять местами». Сетка совпадает с колонками диффа.
 import type { DiffSide, SideName } from '../../../../shared/protocol';
+import { GAP_WIDTH } from '../../diff/splitter';
 
 interface Props {
+  /** Доля ширины левой колонки — кнопки ревизий стоят над своими колонками. */
+  split: number;
   left?: DiffSide;
   right?: DiffSide;
   disabled: boolean;
@@ -10,9 +13,14 @@ interface Props {
   onSwap(): void;
 }
 
-export function RevisionBar({ left, right, disabled, onPick, onSwap }: Props) {
+export function RevisionBar({ split, left, right, disabled, onPick, onSwap }: Props) {
   return (
-    <div className="revision-bar">
+    <div
+      className="revision-bar"
+      style={{
+        gridTemplateColumns: `minmax(0, ${split}fr) ${GAP_WIDTH}px minmax(0, ${1 - split}fr)`,
+      }}
+    >
       <RevisionButton side={left} disabled={disabled} onClick={() => onPick('left')} />
       <button
         className="revision-bar__swap"

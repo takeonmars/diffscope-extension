@@ -2,7 +2,7 @@
 // линия-граница на стороне, где блок пустой (сюда вставлено / отсюда удалено).
 import type { Extension, Range, Text } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
-import type { LineChunk, Side } from './model';
+import type { LineChunk, Side } from '../../../shared/diffModel';
 
 // Документы только для чтения — подсветка считается один раз.
 export function chunkHighlight(side: Side, chunks: readonly LineChunk[], doc: Text): Extension {

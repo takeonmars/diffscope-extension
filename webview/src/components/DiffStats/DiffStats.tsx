@@ -1,5 +1,5 @@
 // Сводка изменений как на GitHub: «+10 −3» и пять квадратиков — доля добавленного и удалённого.
-import { statsBlocks } from '../../diff/model';
+import { statsBlocks } from '../../../../shared/diffModel';
 
 export function DiffStats({ added, removed }: { added: number; removed: number }) {
   const blocks = statsBlocks(added, removed);

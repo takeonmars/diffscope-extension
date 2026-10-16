@@ -25,9 +25,12 @@ export function browserStub(deliver: (message: ExtensionToWebview) => void) {
       description: 'текущее состояние файла',
       content: { kind: 'text' as const, text: s.b },
     };
+    const fragment =
+      s.fragment && (swapped ? { left: s.fragment.right, right: s.fragment.left } : s.fragment);
     return {
       path: 'src/example.ts',
       ...(swapped ? { left: right, right: left } : { left, right }),
+      fragment,
     };
   };
 
@@ -42,6 +45,8 @@ export function browserStub(deliver: (message: ExtensionToWebview) => void) {
       } else if (message.type === 'pickRef') {
         index = (index + 1) % samples.length;
         reply(message.id, { changed: true });
+      } else if (message.type === 'saveLayout') {
+        reply(message.id, null);
       } else if (message.type === 'swap') {
         swapped = !swapped;
         reply(message.id, null);
