@@ -18,12 +18,7 @@ export function collapseUnchanged(
     for (const region of regions) {
       if (!collapsed.has(region.id)) continue;
       const [from, to] = side === 'a' ? [region.aFrom, region.aTo] : [region.bFrom, region.bTo];
-      const widget = new CollapsedWidget(
-        region.id,
-        to - from,
-        regions.length === 1 && isWhole(region, doc, side),
-        onExpand,
-      );
+      const widget = new CollapsedWidget(region.id, to - from, onExpand);
       ranges.push(
         Decoration.replace({ widget, block: true }).range(doc.line(from + 1).from, doc.line(to).to),
       );
@@ -42,17 +37,10 @@ export function collapseUnchanged(
   });
 }
 
-/** Участок — весь документ: файлы совпадают. */
-function isWhole(region: CollapsedRegion, doc: Text, side: Side): boolean {
-  const [from, to] = side === 'a' ? [region.aFrom, region.aTo] : [region.bFrom, region.bTo];
-  return from === 0 && to === doc.lines;
-}
-
 class CollapsedWidget extends WidgetType {
   constructor(
     readonly id: number,
     readonly lines: number,
-    readonly identical: boolean,
     readonly onExpand: (id: number) => void,
   ) {
     super();
@@ -66,9 +54,7 @@ class CollapsedWidget extends WidgetType {
     const dom = document.createElement('div');
     dom.className = 'ds-collapsed';
     dom.title = 'Показать';
-    dom.textContent = this.identical
-      ? `Файлы совпадают · ${linesText(this.lines)}`
-      : `⋯ ${linesText(this.lines)} скрыто`;
+    dom.textContent = `⋯ ${linesText(this.lines)} скрыто`;
     dom.addEventListener('mousedown', (event) => {
       event.preventDefault();
       this.onExpand(this.id);

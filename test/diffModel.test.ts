@@ -1,11 +1,16 @@
+import { Chunk } from '@codemirror/merge';
 import { Text } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import {
   buildLineChunks,
   collapsedRegions,
+  diffStats,
+  lineDiffOverride,
   mapPosition,
+  navigationTarget,
   nextChunkIndex,
   ribbonPath,
+  statsBlocks,
   type LineChunk,
 } from '../webview/src/diff/model';
 
@@ -144,5 +149,88 @@ describe('ribbonPath', () => {
     expect(ribbonPath(40, 10, 30, 50, 90)).toBe(
       'M0,10 C20,10 20,50 40,50 L40,90 C20,90 20,30 0,30 Z',
     );
+  });
+});
+
+describe('toCharChanges', () => {
+  // Применение изменений к A должно давать B — иначе одна колонка покажет не то.
+  const apply = (a: string, b: string) => {
+    let result = '';
+    let pos = 0;
+    for (const ch of lineDiffOverride(a, b)) {
+      result += a.slice(pos, ch.fromA) + b.slice(ch.fromB, ch.toB);
+      pos = ch.toA;
+    }
+    return result + a.slice(pos);
+  };
+  const cases: [string, string, string][] = [
+    ['изменённая строка', 'a\nb\nc', 'a\nB\nc'],
+    ['вставка в середине', 'a\nc', 'a\nb1\nb2\nc'],
+    ['вставка в начале', 'b\nc', 'a\nb\nc'],
+    ['вставка в конце', 'a\nb', 'a\nb\nc\nd'],
+    ['удаление в начале', 'x\na\nb', 'a\nb'],
+    ['удаление в конце', 'a\nb\nc', 'a'],
+    ['замена всего', 'one', 'x\ny'],
+    ['из пустого', '', 'a\nb'],
+    ['в пустой', 'a\nb', ''],
+    ['перевод строки в конце', 'a\nb\n', 'a\nB\nc\n'],
+    ['несколько блоков', 'a\nb\nc\nd\ne\nf', 'a\nB\nc\nd\nf\ng'],
+  ];
+  for (const [name, a, b] of cases) {
+    it(name, () => {
+      expect(apply(a, b)).toBe(b);
+    });
+  }
+
+  it('блоки CodeMirror совпадают с нашими', () => {
+    // Блоки через пустую строку CodeMirror склеивает (между ними 0 символов) — здесь обычная.
+    const a = 'function f() {\n  return 1;\n}\nkeep\nconst x = 1;\n';
+    const b = 'keep\nconst x = 2;\n';
+    const A = Text.of(a.split('\n'));
+    const B = Text.of(b.split('\n'));
+    expect(buildLineChunks(A, B)).toHaveLength(2);
+    expect(Chunk.build(A, B, { override: lineDiffOverride })).toHaveLength(2);
+  });
+});
+
+describe('сводка изменений', () => {
+  it('изменённая строка — удалена и добавлена', () => {
+    expect(diffStats([chunk(0, 2, 0, 3), chunk(5, 5, 6, 8), chunk(9, 10, 11, 11)])).toEqual({
+      added: 5,
+      removed: 3,
+    });
+  });
+
+  it('квадратики как на GitHub', () => {
+    expect(statsBlocks(0, 0)).toEqual({ added: 0, removed: 0, neutral: 5 });
+    expect(statsBlocks(10, 0)).toEqual({ added: 5, removed: 0, neutral: 0 });
+    expect(statsBlocks(60, 40)).toEqual({ added: 3, removed: 2, neutral: 0 });
+    expect(statsBlocks(1, 1)).toEqual({ added: 1, removed: 1, neutral: 3 });
+    // Малая доля не пропадает.
+    expect(statsBlocks(100, 1)).toEqual({ added: 4, removed: 1, neutral: 0 });
+    expect(statsBlocks(1, 100)).toEqual({ added: 1, removed: 4, neutral: 0 });
+  });
+});
+
+describe('navigationTarget', () => {
+  const tops = [100, 300, 500, 700];
+
+  it('от счётчика — ровно на один блок', () => {
+    expect(navigationTarget(tops, 400, 1, undefined, 1)).toBe(2);
+    expect(navigationTarget(tops, 400, -1, undefined, 2)).toBe(1);
+    expect(navigationTarget(tops, 400, 1, 2, 0)).toBe(3);
+  });
+
+  it('текущий блок ниже линии чтения — сначала он сам', () => {
+    expect(navigationTarget(tops, 50, 1, undefined, 0)).toBe(0);
+  });
+
+  it('на краях — никуда', () => {
+    expect(navigationTarget(tops, 0, 1, 3, 3)).toBeUndefined();
+    expect(navigationTarget(tops, 0, -1, 0, 0)).toBeUndefined();
+  });
+
+  it('без текущего — по положению', () => {
+    expect(navigationTarget(tops, 800, -1, undefined, undefined)).toBe(3);
   });
 });

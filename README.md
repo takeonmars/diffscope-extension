@@ -13,8 +13,9 @@ npm run dev:webview  # вкладка диффа в браузере, с заг�
 npm run package      # diffscope-extension-<версия>.vsix
 ```
 
-Отладка: в VS Code — «Run and Debug» → «Запустить расширение», затем в палитре команд
-«DiffScope: Открыть пустую вкладку диффа». Инструменты разработчика вкладки — «Developer: Open
-Webview Developer Tools».
+Отладка: в VS Code — F5 («Запустить расширение»), в новом окне открыть папку с git-репозиторием и
+вызвать «DiffScope: Сравнить с…» (палитра команд, контекстное меню файла в проводнике, вкладки
+или редактора). Инструменты разработчика вкладки — «Developer: Open Webview Developer Tools»;
+журнал git-команд — Output → DiffScope (уровень Trace).
 
 Установка: «Extensions: Install from VSIX…» в VS Code или Cursor.

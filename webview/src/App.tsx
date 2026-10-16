@@ -1,28 +1,65 @@
-import { useEffect, useRef, useState } from 'react';
-import { DiffView, type DiffController, type DiffStats } from './components/DiffView/DiffView';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DiffData, SideName } from '../../shared/protocol';
+import { CancelledError } from './bridge';
+import { DiffStats } from './components/DiffStats/DiffStats';
+import {
+  DiffView,
+  type DiffController,
+  type DiffMode,
+  type DiffSummary,
+} from './components/DiffView/DiffView';
+import { Loader } from './components/Loader/Loader';
+import { Placeholder, sideText, unviewableReason } from './components/Placeholder/Placeholder';
+import { RevisionBar } from './components/RevisionBar/RevisionBar';
 import { Toolbar } from './components/Toolbar/Toolbar';
-import { samples } from './prototype/samples';
 import { useThemeKind } from './theme/useThemeKind';
 import { bridge } from './vscodeApi';
 
-// Этап 1: прототип лент на тестовых данных. Ревизии из git появятся на этапе 3.
+const MODES: [DiffMode, string, string][] = [
+  ['ribbons', 'Ленты', 'Две колонки без выравнивания, ленты соединяют блоки'],
+  ['aligned', 'MergeView', 'Две колонки выровнены: напротив вставки — пустое место'],
+  ['unified', '1 колонка', 'Удалённые строки над добавленными'],
+];
+
+type Status =
+  | { state: 'loading'; cancel(): void }
+  | { state: 'ready' }
+  | { state: 'cancelled' }
+  | { state: 'error'; message: string };
+
 export function App() {
-  const [title, setTitle] = useState('');
-  const [sampleIndex, setSampleIndex] = useState(0);
+  const [data, setData] = useState<DiffData>();
+  const [status, setStatus] = useState<Status>({ state: 'loading', cancel: () => {} });
+  const [picking, setPicking] = useState(false);
+  const [mode, setMode] = useState<DiffMode>('ribbons');
   const [wholeFile, setWholeFile] = useState(false);
-  const [stats, setStats] = useState<DiffStats>();
+  const [summary, setSummary] = useState<DiffSummary>();
   const [current, setCurrent] = useState<number>();
   const diff = useRef<DiffController>(null);
   const theme = useThemeKind();
-  const sample = samples[sampleIndex];
+
+  const load = useCallback(() => {
+    const req = bridge.requestLatest('load', {});
+    setStatus({ state: 'loading', cancel: req.cancel });
+    req.promise.then(
+      (result) => {
+        setData(result);
+        setCurrent(undefined);
+        setStatus({ state: 'ready' });
+      },
+      (error: Error) =>
+        setStatus(
+          error instanceof CancelledError
+            ? { state: 'cancelled' }
+            : { state: 'error', message: error.message },
+        ),
+    );
+  }, []);
 
   useEffect(() => {
-    const off = bridge.onEvent((event) => {
-      if (event.type === 'init') setTitle(event.title);
-    });
     bridge.ready();
-    return off;
-  }, []);
+    load();
+  }, [load]);
 
   // F7 / Shift+F7 — следующее / предыдущее изменение, как в WebStorm.
   useEffect(() => {
@@ -35,22 +72,37 @@ export function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const total = stats?.chunks ?? 0;
+  const pick = async (side: SideName) => {
+    setPicking(true);
+    try {
+      const { changed } = await bridge.request('pickRef', { side }).promise;
+      if (changed) load();
+    } catch (error) {
+      setStatus({ state: 'error', message: (error as Error).message });
+    } finally {
+      setPicking(false);
+    }
+  };
+
+  const swap = async () => {
+    await bridge.request('swap', {}).promise;
+    load();
+  };
+
+  const reason = data && unviewableReason(data);
+  const showDiff = data && !reason;
+  const count = summary?.chunks ?? 0;
 
   return (
     <div className="app">
-      <Toolbar title={title}>
-        <select
-          value={sampleIndex}
-          onChange={(e) => setSampleIndex(Number(e.target.value))}
-          aria-label="Пример"
-        >
-          {samples.map((s, i) => (
-            <option key={s.name} value={i}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+      <Toolbar
+        title={
+          <>
+            {data?.path}
+            {showDiff && summary && <DiffStats added={summary.added} removed={summary.removed} />}
+          </>
+        }
+      >
         <label className="checkbox">
           <input
             type="checkbox"
@@ -59,40 +111,77 @@ export function App() {
           />
           Весь файл
         </label>
+        <div className="segmented" role="group" aria-label="Вид">
+          {MODES.map(([value, label, title]) => (
+            <button
+              key={value}
+              aria-pressed={mode === value}
+              onClick={() => setMode(value)}
+              title={title}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="nav" role="group" aria-label="Изменения">
           <button
             onClick={() => diff.current?.navigate(-1)}
-            disabled={!total}
+            disabled={!showDiff || !count}
             title="Предыдущее изменение (Shift+F7)"
           >
             ↑
           </button>
           <span className="nav__counter">
-            {total ? `${current === undefined ? '–' : current + 1} / ${total}` : 'нет изменений'}
+            {!showDiff
+              ? ''
+              : count
+                ? `${current === undefined ? '–' : current + 1} / ${count}`
+                : 'нет изменений'}
           </span>
           <button
             onClick={() => diff.current?.navigate(1)}
-            disabled={!total}
+            disabled={!showDiff || !count}
             title="Следующее изменение (F7)"
           >
             ↓
           </button>
         </div>
-        {stats && (
-          <span className="toolbar__stats">
-            дифф {Math.round(stats.diffTime)} мс · всего {Math.round(stats.renderTime)} мс
-          </span>
-        )}
       </Toolbar>
-      <DiffView
-        a={sample.a}
-        b={sample.b}
-        dark={theme === 'dark' || theme === 'high-contrast'}
-        wholeFile={wholeFile}
-        controller={diff}
-        onStats={setStats}
-        onCurrentChunk={setCurrent}
+      <RevisionBar
+        left={data?.left}
+        right={data?.right}
+        disabled={picking || status.state === 'loading'}
+        onPick={pick}
+        onSwap={swap}
       />
+      <div className="app__diff">
+        {showDiff && (
+          <DiffView
+            a={sideText(data.left.content)}
+            b={sideText(data.right.content)}
+            path={data.path}
+            mode={mode}
+            dark={theme === 'dark' || theme === 'high-contrast'}
+            wholeFile={wholeFile}
+            controller={diff}
+            onSummary={setSummary}
+            onCurrentChunk={setCurrent}
+          />
+        )}
+        {reason && <Placeholder>{reason}</Placeholder>}
+        {status.state === 'cancelled' && (
+          <Placeholder>
+            Загрузка отменена. <button onClick={load}>Повторить</button>
+          </Placeholder>
+        )}
+        {status.state === 'error' && (
+          <Placeholder>
+            <span className="error">{status.message}</span>{' '}
+            <button onClick={load}>Повторить</button>
+          </Placeholder>
+        )}
+        {status.state === 'loading' && <Loader onCancel={status.cancel} />}
+      </div>
     </div>
   );
 }

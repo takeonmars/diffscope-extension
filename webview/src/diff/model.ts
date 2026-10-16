@@ -1,7 +1,7 @@
 // Модель диффа в строках: блоки изменений, свёрнутые участки, соответствие позиций между
 // колонками, форма ленты. Не зависит от DOM — тестируется отдельно.
-import { diff, presentableDiff } from '@codemirror/merge';
-import type { Text } from '@codemirror/state';
+import { Change, diff, presentableDiff } from '@codemirror/merge';
+import { Text } from '@codemirror/state';
 
 export type ChunkKind = 'inserted' | 'deleted' | 'modified';
 
@@ -75,6 +75,53 @@ export function buildLineChunks(a: Text, b: Text): LineChunk[] {
   return chunks;
 }
 
+/** Документы обеих сторон и блоки — считаются один раз на дифф и общие для всех режимов. */
+export interface PreparedDiff {
+  docA: Text;
+  docB: Text;
+  chunks: LineChunk[];
+  /** Время расчёта блоков, мс. */
+  diffTime: number;
+}
+
+export function prepareDiff(a: string, b: string): PreparedDiff {
+  const docA = Text.of(a.split(/\r\n|\r|\n/));
+  const docB = Text.of(b.split(/\r\n|\r|\n/));
+  const started = performance.now();
+  const chunks = buildLineChunks(docA, docB);
+  return { docA, docB, chunks, diffTime: performance.now() - started };
+}
+
+/** Сводка как на GitHub: изменённая строка считается удалённой и добавленной. */
+export function diffStats(chunks: readonly LineChunk[]): { added: number; removed: number } {
+  let added = 0;
+  let removed = 0;
+  for (const c of chunks) {
+    added += c.bTo - c.bFrom;
+    removed += c.aTo - c.aFrom;
+  }
+  return { added, removed };
+}
+
+/**
+ * Квадратики сводки (всего `total`): доля добавленных и удалённых; при малом числе изменений
+ * часть квадратиков серые — как на GitHub.
+ */
+export function statsBlocks(
+  added: number,
+  removed: number,
+  total = 5,
+): { added: number; removed: number; neutral: number } {
+  const changed = added + removed;
+  if (!changed) return { added: 0, removed: 0, neutral: total };
+  const filled = Math.min(total, changed);
+  let green = Math.round((filled * added) / changed);
+  // Ненулевая сторона получает хотя бы один квадратик.
+  if (added && !green) green = 1;
+  if (removed && green === filled) green = filled - 1;
+  return { added: green, removed: filled - green, neutral: total - filled };
+}
+
 /** Символ для n-й различной строки, в обход суррогатных пар UTF-16. */
 function codeUnit(n: number): string {
   return String.fromCharCode(n < 0xd800 ? n : n + 0x800);
@@ -92,6 +139,43 @@ function inlineChanges(a: Text, b: Text, chunk: LineChunk): InlineChange[] {
     fromB: startB + c.fromB,
     toB: startB + c.toB,
   }));
+}
+
+/**
+ * Наш дифф по строкам в виде изменений символов — для `diffConfig.override` CodeMirror
+ * (одна колонка, `unifiedMergeView`): блоки получаются те же, что в двух колонках.
+ */
+export function lineDiffOverride(a: string, b: string): readonly Change[] {
+  const docA = Text.of(a.split('\n'));
+  const docB = Text.of(b.split('\n'));
+  return toCharChanges(docA, docB, buildLineChunks(docA, docB));
+}
+
+export function toCharChanges(a: Text, b: Text, chunks: readonly LineChunk[]): Change[] {
+  const out: Change[] = [];
+  for (const c of chunks) {
+    if (c.kind === 'modified' && c.inline.length) {
+      for (const i of c.inline) out.push(new Change(i.fromA, i.toA, i.fromB, i.toB));
+      continue;
+    }
+    const [fromA, toA] = charSpan(a, c.aFrom, c.aTo);
+    const [fromB, toB] = charSpan(b, c.bFrom, c.bTo);
+    out.push(new Change(fromA, toA, fromB, toB));
+  }
+  return out;
+}
+
+/**
+ * Символы строк [from, to) вместе с переводом строки — так, чтобы удаление диапазона давало
+ * документ другой стороны. В конце документа берётся перевод строки перед диапазоном.
+ */
+function charSpan(doc: Text, from: number, to: number): [number, number] {
+  if (from === to) {
+    const pos = from < doc.lines ? doc.line(from + 1).from : doc.length;
+    return [pos, pos];
+  }
+  if (to < doc.lines) return [doc.line(from + 1).from, doc.line(to + 1).from];
+  return [from > 0 ? doc.line(from).to : 0, doc.length];
 }
 
 /** Свёрнутый неизменённый участок: одинаковые строки с обеих сторон. */
@@ -174,6 +258,25 @@ export function nextChunkIndex(
     if (dir === -1 && (found === -1 || found >= last)) found = last - 1;
   }
   return found >= 0 && found < tops.length ? found : undefined;
+}
+
+/**
+ * Куда перейти по F7 / Shift+F7: на соседний блок от того, что на счётчике (`last` — выбранный
+ * навигацией, иначе `current` — первый видимый). Если текущий блок ещё ниже линии чтения, F7
+ * сначала ставит на неё его самого. Без текущего — по положению (`nextChunkIndex`).
+ */
+export function navigationTarget(
+  tops: readonly number[],
+  ref: number,
+  dir: 1 | -1,
+  last: number | undefined,
+  current: number | undefined,
+): number | undefined {
+  const base = last ?? current;
+  if (base === undefined) return nextChunkIndex(tops, ref, dir);
+  if (last === undefined && dir === 1 && tops[base] > ref + 2) return base;
+  const index = base + dir;
+  return index >= 0 && index < tops.length ? index : undefined;
 }
 
 /**

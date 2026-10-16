@@ -24,7 +24,8 @@ export function buildHtml({
   // style-src с nonce — CodeMirror добавляет свои <style> (EditorView.cspNonce).
   const csp = [
     `default-src 'none'`,
-    `script-src 'nonce-${nonce}'`,
+    // cspSource — для частей сборки, загружаемых по требованию (языки подсветки).
+    `script-src 'nonce-${nonce}' ${cspSource}`,
     `style-src ${cspSource} 'nonce-${nonce}'`,
     `font-src ${cspSource}`,
     `img-src ${cspSource} data:`,

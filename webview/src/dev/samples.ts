@@ -1,4 +1,4 @@
-// Тестовые данные прототипа лент (этап 1): две версии файла без git.
+// Тестовые данные для vite dev в браузере: две версии файла без git.
 
 export interface Sample {
   name: string;
@@ -154,4 +154,5 @@ function generateLarge(copies: number): Sample {
 export const samples: Sample[] = [
   { name: 'Небольшой файл', a: smallA, b: smallB },
   generateLarge(100),
+  { name: 'Без изменений', a: smallA, b: smallA },
 ];

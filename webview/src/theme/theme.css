@@ -309,3 +309,219 @@ select {
   stroke: color-mix(in srgb, var(--ds-kind) var(--ds-ribbon-stroke-alpha), transparent);
   stroke-width: 1;
 }
+
+/* --- Вкладка диффа --- */
+
+.app__diff {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.app__diff > .diff-view {
+  flex: 1;
+}
+
+.segmented {
+  display: inline-flex;
+}
+
+.segmented button {
+  border-radius: 0;
+}
+
+.segmented button:first-child {
+  border-radius: 2px 0 0 2px;
+}
+
+.segmented button:last-child {
+  border-radius: 0 2px 2px 0;
+}
+
+.segmented button[aria-pressed='true'] {
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, #0078d4);
+}
+
+/* Сетка совпадает с колонками диффа: колонка, промежуток с лентами, колонка. */
+.revision-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--ds-border);
+  background: var(--ds-bg);
+}
+
+.revision-bar__swap {
+  justify-self: center;
+  padding: 2px 8px;
+  background: transparent;
+}
+
+.revision {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 6px;
+  padding: 3px 8px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.revision:hover:not(:disabled) {
+  background: var(--ds-button-bg);
+  border-color: var(--ds-border);
+}
+
+.revision__label {
+  flex: none;
+  font-weight: 600;
+}
+
+.revision__description {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-muted);
+}
+
+.revision__missing {
+  flex: none;
+  color: var(--ds-kind-deleted);
+}
+
+.revision__chevron {
+  flex: none;
+  margin-left: auto;
+  color: var(--ds-muted);
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  color: var(--ds-muted);
+  background: var(--ds-bg);
+}
+
+/* Одна колонка: цвета unifiedMergeView — из тех же переменных, что у двух колонок. */
+.ds-unified {
+  height: 100%;
+}
+
+.ds-unified .cm-editor .cm-content .cm-changedLine {
+  background: color-mix(in srgb, var(--ds-kind-inserted) var(--ds-line-alpha), transparent);
+}
+
+.ds-unified .cm-editor .cm-content .cm-changedText {
+  background: color-mix(in srgb, var(--ds-kind-inserted) var(--ds-inline-alpha), transparent);
+}
+
+.ds-unified .cm-editor .cm-content .cm-deletedChunk {
+  background: color-mix(in srgb, var(--ds-kind-deleted) var(--ds-line-alpha), transparent);
+}
+
+.ds-unified .cm-editor .cm-content .cm-deletedChunk .cm-deletedText {
+  background: color-mix(in srgb, var(--ds-kind-deleted) var(--ds-inline-alpha), transparent);
+}
+
+.ds-unified .cm-editor .cm-gutters .cm-changedLineGutter {
+  background: var(--ds-kind-inserted);
+}
+
+.ds-unified .cm-editor .cm-gutters .cm-deletedLineGutter {
+  background: var(--ds-kind-deleted);
+}
+
+/* Сводка изменений как на GitHub. */
+.toolbar__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__added {
+  color: var(--ds-kind-inserted);
+  font-weight: 600;
+}
+
+.stats__removed {
+  color: var(--ds-kind-deleted);
+  font-weight: 600;
+}
+
+.stats__none {
+  color: var(--ds-muted);
+}
+
+.stats__blocks {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.stats__block {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+}
+
+.stats__block--added {
+  background: var(--ds-kind-inserted);
+}
+
+.stats__block--removed {
+  background: var(--ds-kind-deleted);
+}
+
+.stats__block--neutral {
+  background: color-mix(in srgb, var(--ds-fg) 20%, transparent);
+}
+
+/* Режим MergeView: прокрутка общая; фон блоков — наша подсветка (как у «Лент»), не MergeView. */
+.ds-aligned {
+  height: 100%;
+  overflow: auto;
+}
+
+/* Тема MergeView красит .cm-changedLine своим цветом — перебиваем более конкретным селектором. */
+.ds-aligned .cm-editor .cm-content .cm-line.ds-line {
+  background: color-mix(in srgb, var(--ds-kind) var(--ds-line-alpha), transparent);
+}
+
+.ds-aligned .cm-mergeViewEditor + .cm-mergeViewEditor {
+  border-left: 1px solid var(--ds-border);
+}
+
+.ds-aligned .cm-merge-a .cm-gutters .cm-changedLineGutter {
+  background: var(--ds-kind-deleted);
+}
+
+.ds-aligned .cm-merge-b .cm-gutters .cm-changedLineGutter {
+  background: var(--ds-kind-inserted);
+}
+
+.ds-aligned .cm-mergeSpacer {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--ds-fg) 6%, transparent) 4px 5px
+  );
+}

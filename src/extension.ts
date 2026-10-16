@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { openDiffPanel } from './diffPanel/diffPanel';
+import { compareWith } from './commands/compareWith';
 import { setGitPath, setGitTrace } from './git/runner';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('DiffScope', { log: true });
   context.subscriptions.push(
     log,
-    vscode.commands.registerCommand('diffscope.openDiffTab', () => {
-      openDiffPanel(context, log, 'DiffScope');
-    }),
+    vscode.commands.registerCommand('diffscope.compareWith', (uri?: vscode.Uri) =>
+      compareWith(context, log, uri),
+    ),
   );
 
   setGitTrace((e) => {

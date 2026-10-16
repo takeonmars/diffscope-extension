@@ -1,24 +1,23 @@
 // Две колонки диффа как в WebStorm: два независимых редактора без выравнивания, между ними —
 // SVG с лентами, соединяющими соответствующие блоки; прокрутка синхронизируется по блокам.
 // Неизменённые участки сворачиваются; навигация по блокам; метки блоков у полос прокрутки.
-import { EditorState, Text, type Extension } from '@codemirror/state';
+import { EditorState, type Extension, type Text } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { collapseUnchanged, setCollapsed } from './collapse';
 import { chunkHighlight } from './highlight';
 import {
-  buildLineChunks,
   collapsedRegions,
   mapPosition,
-  nextChunkIndex,
+  navigationTarget,
   ribbonPath,
   type CollapsedRegion,
   type LineChunk,
+  type PreparedDiff,
   type Side,
 } from './model';
 
 export interface SideBySideConfig {
-  a: string;
-  b: string;
+  prepared: PreparedDiff;
   /** Общие расширения обеих колонок: тема, язык. */
   extensions: Extension;
   /** Показывать весь файл (иначе неизменённое свёрнуто). */
@@ -37,8 +36,6 @@ const READING_LINE = 1 / 3;
 export class SideBySideDiff {
   readonly dom: HTMLElement;
   readonly chunks: readonly LineChunk[];
-  /** Время расчёта блоков, мс — для оценки на больших файлах. */
-  readonly diffTime: number;
 
   private readonly a: EditorView;
   private readonly b: EditorView;
@@ -58,12 +55,10 @@ export class SideBySideDiff {
   private rulersDirty = true;
 
   constructor(parent: HTMLElement, config: SideBySideConfig) {
-    const docA = Text.of(config.a.split(/\r?\n/));
-    const docB = Text.of(config.b.split(/\r?\n/));
-    const started = performance.now();
-    this.chunks = buildLineChunks(docA, docB);
-    this.diffTime = performance.now() - started;
-    this.regions = collapsedRegions(this.chunks, docA.lines, config.context);
+    const { docA, docB, chunks } = config.prepared;
+    this.chunks = chunks;
+    // Без изменений смотреть нечего — файл показывается целиком, сворачивать нечего.
+    this.regions = chunks.length ? collapsedRegions(chunks, docA.lines, config.context) : [];
     this.collapsed = new Set(config.wholeFile ? [] : this.regions.map((r) => r.id));
     this.onCurrentChunk = config.onCurrentChunk;
 
@@ -115,6 +110,10 @@ export class SideBySideDiff {
     this.scheduleDraw();
   }
 
+  get chunkCount(): number {
+    return this.chunks.length;
+  }
+
   destroy(): void {
     cancelAnimationFrame(this.frame);
     this.resizeObserver.disconnect();
@@ -159,7 +158,7 @@ export class SideBySideDiff {
   navigate(dir: 1 | -1): void {
     const s = this.a.scrollDOM;
     const ref = s.scrollTop + s.clientHeight * READING_LINE - documentOffset(this.a);
-    const index = nextChunkIndex(this.chunkTops(), ref, dir, this.lastNavigated);
+    const index = navigationTarget(this.chunkTops(), ref, dir, this.lastNavigated, this.current);
     if (index !== undefined) this.goTo(index);
   }
 

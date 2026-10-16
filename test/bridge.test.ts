@@ -1,11 +1,38 @@
 // Мост вкладки и маршрутизатор расширения, соединённые напрямую — без VS Code.
 import { describe, expect, it, vi } from 'vitest';
-import type { ExtensionToWebview, WebviewToExtension } from '../shared/protocol';
-import { createHandlers } from '../src/diffPanel/handlers';
+import type {
+  DiffData,
+  DiffSide,
+  ExtensionToWebview,
+  WebviewToExtension,
+} from '../shared/protocol';
 import { MessageRouter, type Handlers } from '../src/diffPanel/messageRouter';
+import { DiffSession, WORKTREE, type Revision } from '../src/diffPanel/session';
 import { CancelledError, createBridge } from '../webview/src/bridge';
 
-function connect(handlers: Handlers = createHandlers()) {
+const side = (label: string): DiffSide => ({ label, content: { kind: 'text', text: label } });
+const data: DiffData = { path: 'a.ts', left: side('L'), right: side('R') };
+
+function fakeHandlers(overrides: Partial<Handlers> = {}): Handlers {
+  return {
+    load: async () => data,
+    pickRef: async () => ({ changed: false }),
+    swap: async () => null,
+    ...overrides,
+  };
+}
+
+/** Обработчик, который ждёт отмены и запоминает её сигнал. */
+function hanging() {
+  const state: { signal?: AbortSignal } = {};
+  const handler = (_params: unknown, signal: AbortSignal) => {
+    state.signal = signal;
+    return new Promise<never>(() => {});
+  };
+  return { state, handler };
+}
+
+function connect(handlers: Handlers = fakeHandlers()) {
   const toExtension: WebviewToExtension[] = [];
   const toWebview: ExtensionToWebview[] = [];
   const onReady = vi.fn();
@@ -28,58 +55,49 @@ function connect(handlers: Handlers = createHandlers()) {
 describe('мост и маршрутизатор', () => {
   it('отвечает на запрос с тем же id', async () => {
     const { bridge, toExtension, toWebview } = connect();
-    const result = await bridge.request('ping', { text: 'привет' }).promise;
-    expect(result.text).toBe('привет');
-    expect(toExtension[0]).toMatchObject({ kind: 'request', id: 1, type: 'ping' });
+    expect(await bridge.request('load', {}).promise).toEqual(data);
+    expect(toExtension[0]).toMatchObject({ kind: 'request', id: 1, type: 'load' });
     expect(toWebview[0]).toMatchObject({ kind: 'result', id: 1 });
   });
 
   it('передаёт ошибку обработчика', async () => {
-    const { bridge } = connect({
-      ...createHandlers(),
-      ping: async () => {
-        throw new Error('сломалось');
-      },
-    });
-    await expect(bridge.request('ping', { text: '' }).promise).rejects.toThrow('сломалось');
+    const { bridge } = connect(
+      fakeHandlers({
+        load: async () => {
+          throw new Error('сломалось');
+        },
+      }),
+    );
+    await expect(bridge.request('load', {}).promise).rejects.toThrow('сломалось');
   });
 
   it('отмена прерывает обработчик и не присылает ответ', async () => {
-    let signal: AbortSignal | undefined;
-    const { bridge, toExtension, toWebview } = connect({
-      ...createHandlers(),
-      wait: (_params, s) => {
-        signal = s;
-        return new Promise(() => {});
-      },
-    });
-    const req = bridge.request('wait', { ms: 1000 });
+    const { state, handler } = hanging();
+    const { bridge, toExtension, toWebview } = connect(fakeHandlers({ load: handler }));
+    const req = bridge.request('load', {});
     req.cancel();
     await expect(req.promise).rejects.toBeInstanceOf(CancelledError);
-    expect(signal?.aborted).toBe(true);
+    expect(state.signal?.aborted).toBe(true);
     expect(toExtension.at(-1)).toEqual({ kind: 'cancel', id: 1 });
     expect(toWebview).toHaveLength(0);
   });
 
   it('requestLatest отменяет предыдущий запрос того же типа', async () => {
-    vi.useFakeTimers();
-    try {
-      const { bridge } = connect();
-      const first = bridge.requestLatest('wait', { ms: 100 });
-      const second = bridge.requestLatest('wait', { ms: 50 });
-      await expect(first.promise).rejects.toBeInstanceOf(CancelledError);
-      await vi.advanceTimersByTimeAsync(50);
-      await expect(second.promise).resolves.toEqual({ waited: 50 });
-    } finally {
-      vi.useRealTimers();
-    }
+    let calls = 0;
+    const { state, handler } = hanging();
+    const { bridge } = connect(
+      fakeHandlers({ load: (p, s) => (++calls === 1 ? handler(p, s) : Promise.resolve(data)) }),
+    );
+    const first = bridge.requestLatest('load', {});
+    const second = bridge.requestLatest('load', {});
+    await expect(first.promise).rejects.toBeInstanceOf(CancelledError);
+    expect(state.signal?.aborted).toBe(true);
+    await expect(second.promise).resolves.toEqual(data);
   });
 
   it('неизвестный тип запроса — ошибка', async () => {
     const { bridge } = connect({} as Handlers);
-    await expect(bridge.request('ping', { text: '' }).promise).rejects.toThrow(
-      'Неизвестный запрос',
-    );
+    await expect(bridge.request('load', {}).promise).rejects.toThrow('Неизвестный запрос');
   });
 
   it('ready вызывает обработчик, события доходят до подписчиков', () => {
@@ -93,16 +111,60 @@ describe('мост и маршрутизатор', () => {
   });
 
   it('dispose отменяет выполняющиеся запросы', () => {
-    let signal: AbortSignal | undefined;
-    const { bridge, router } = connect({
-      ...createHandlers(),
-      wait: (_params, s) => {
-        signal = s;
-        return new Promise(() => {});
-      },
-    });
-    void bridge.request('wait', { ms: 1000 }).promise.catch(() => {});
+    const { state, handler } = hanging();
+    const { bridge, router } = connect(fakeHandlers({ load: handler }));
+    void bridge.request('load', {}).promise.catch(() => {});
     router.dispose();
-    expect(signal?.aborted).toBe(true);
+    expect(state.signal?.aborted).toBe(true);
+  });
+});
+
+describe('DiffSession', () => {
+  const head: Revision = { kind: 'rev', rev: 'HEAD', label: 'HEAD' };
+  const main: Revision = { kind: 'rev', rev: 'refs/heads/main', label: 'main', description: 'msg' };
+  const signal = new AbortController().signal;
+
+  function session(picked?: Revision) {
+    const onChange = vi.fn();
+    const s = new DiffSession('src/app.ts', head, WORKTREE, {
+      loadSide: async (r) => side(r.kind === 'worktree' ? 'wt' : r.label),
+      pickRevision: async () => picked,
+      onChange,
+    });
+    return { s, onChange, h: s.handlers() };
+  }
+
+  it('заголовок вкладки', () => {
+    expect(session().s.title).toBe('app.ts (HEAD ↔ Рабочая копия)');
+  });
+
+  it('load отдаёт обе стороны', async () => {
+    const { h } = session();
+    expect(await h.load({}, signal)).toEqual({
+      path: 'src/app.ts',
+      left: side('HEAD'),
+      right: side('wt'),
+    });
+  });
+
+  it('выбор ревизии меняет сторону и заголовок', async () => {
+    const { s, h, onChange } = session(main);
+    expect(await h.pickRef({ side: 'right' }, signal)).toEqual({ changed: true });
+    expect(s.right).toBe(main);
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(s.title).toBe('app.ts (HEAD ↔ main)');
+  });
+
+  it('закрытый список ничего не меняет', async () => {
+    const { s, h, onChange } = session(undefined);
+    expect(await h.pickRef({ side: 'left' }, signal)).toEqual({ changed: false });
+    expect(s.left).toBe(head);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('swap', async () => {
+    const { s, h } = session();
+    await h.swap({}, signal);
+    expect([s.left, s.right]).toEqual([WORKTREE, head]);
   });
 });
