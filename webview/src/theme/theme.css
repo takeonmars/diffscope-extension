@@ -1,0 +1,151 @@
+/* Цвета интерфейса и диффа — из переменных темы VS Code; запасные значения — для vite dev в браузере.
+   Цвета синтаксиса VS Code во вкладку не передаёт — свои схемы для светлой и тёмной темы. */
+:root {
+  --ds-bg: var(--vscode-editor-background, #ffffff);
+  --ds-fg: var(--vscode-editor-foreground, #1f1f1f);
+  --ds-muted: var(--vscode-descriptionForeground, #6b6b6b);
+  --ds-border: var(--vscode-panel-border, #e0e0e0);
+  --ds-toolbar-bg: var(--vscode-editorGroupHeader-tabsBackground, #f3f3f3);
+  --ds-button-bg: var(--vscode-button-secondaryBackground, #e5e5e5);
+  --ds-button-fg: var(--vscode-button-secondaryForeground, #1f1f1f);
+  --ds-button-hover: var(--vscode-button-secondaryHoverBackground, #d5d5d5);
+  --ds-focus: var(--vscode-focusBorder, #0078d4);
+  --ds-error: var(--vscode-errorForeground, #c72e0f);
+  --ds-progress: var(--vscode-progressBar-background, #0078d4);
+
+  --ds-inserted: var(--vscode-diffEditor-insertedTextBackground, rgba(156, 204, 44, 0.25));
+  --ds-removed: var(--vscode-diffEditor-removedTextBackground, rgba(255, 0, 0, 0.2));
+  --ds-inserted-line: var(--vscode-diffEditor-insertedLineBackground, rgba(155, 185, 85, 0.2));
+  --ds-removed-line: var(--vscode-diffEditor-removedLineBackground, rgba(255, 0, 0, 0.15));
+
+  --ds-font: var(--vscode-font-family, system-ui, sans-serif);
+  --ds-font-size: var(--vscode-font-size, 13px);
+  --ds-editor-font: var(--vscode-editor-font-family, ui-monospace, monospace);
+  --ds-editor-font-size: var(--vscode-editor-font-size, 13px);
+
+  --ds-syntax-keyword: #0000ff;
+  --ds-syntax-string: #a31515;
+  --ds-syntax-comment: #008000;
+  --ds-syntax-number: #098658;
+  --ds-syntax-type: #267f99;
+}
+
+body.vscode-dark,
+body.vscode-high-contrast {
+  --ds-syntax-keyword: #569cd6;
+  --ds-syntax-string: #ce9178;
+  --ds-syntax-comment: #6a9955;
+  --ds-syntax-number: #b5cea8;
+  --ds-syntax-type: #4ec9b0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  padding: 0;
+  background: var(--ds-bg);
+  color: var(--ds-fg);
+  font-family: var(--ds-font);
+  font-size: var(--ds-font-size);
+}
+
+button {
+  font: inherit;
+  color: var(--ds-button-fg);
+  background: var(--ds-button-bg);
+  border: none;
+  border-radius: 2px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--ds-button-hover);
+}
+
+button:focus-visible {
+  outline: 1px solid var(--ds-focus);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error {
+  color: var(--ds-error);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app__body {
+  position: relative;
+  flex: 1;
+  padding: 8px 16px;
+  overflow: auto;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--ds-toolbar-bg);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.toolbar__title {
+  margin-right: auto;
+  color: var(--ds-muted);
+}
+
+.loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--ds-bg) 70%, transparent);
+}
+
+.loader__bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  overflow: hidden;
+}
+
+.loader__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: var(--ds-progress);
+  animation: ds-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes ds-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(400%);
+  }
+}
