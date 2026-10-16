@@ -26,8 +26,14 @@
         "category": "DiffScope"
       },
       {
-        "command": "diffscope.showLineHistory",
+        "command": "diffscope.showFileHistory",
         "title": "Показать историю",
+        "category": "DiffScope",
+        "icon": "$(history)"
+      },
+      {
+        "command": "diffscope.showLineHistory",
+        "title": "Показать историю по строкам",
         "category": "DiffScope",
         "icon": "$(history)"
       },
@@ -41,41 +47,78 @@
         "command": "diffscope.history.openInNewTab",
         "title": "Открыть в новой вкладке",
         "category": "DiffScope"
+      },
+      {
+        "command": "diffscope.compareBranches",
+        "title": "Сравнить ветки",
+        "category": "DiffScope",
+        "icon": "$(git-compare)"
+      },
+      {
+        "command": "diffscope.changedFiles.open",
+        "title": "Показать файл во вкладке сравнения",
+        "category": "DiffScope"
+      },
+      {
+        "command": "diffscope.changedFiles.openInNewTab",
+        "title": "Открыть в отдельной вкладке",
+        "category": "DiffScope"
+      },
+      {
+        "command": "diffscope.changedFiles.refresh",
+        "title": "Обновить",
+        "category": "DiffScope",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "diffscope.changedFiles.swap",
+        "title": "Поменять местами",
+        "category": "DiffScope",
+        "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "diffscope.changedFiles.modePr",
+        "title": "Режим: как в PR (только изменения ветки)",
+        "category": "DiffScope",
+        "icon": "$(git-pull-request)"
+      },
+      {
+        "command": "diffscope.changedFiles.modeDirect",
+        "title": "Режим: прямое сравнение (все отличия)",
+        "category": "DiffScope",
+        "icon": "$(diff)"
+      },
+      {
+        "command": "diffscope.changedFiles.viewAsList",
+        "title": "Показать списком",
+        "category": "DiffScope",
+        "icon": "$(list-flat)"
+      },
+      {
+        "command": "diffscope.changedFiles.viewAsTree",
+        "title": "Показать деревом",
+        "category": "DiffScope",
+        "icon": "$(list-tree)"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "diffscope.compareWith",
+          "submenu": "diffscope.file",
           "when": "!explorerResourceIsFolder && resourceScheme == file",
           "group": "3_compare@10"
-        },
-        {
-          "command": "diffscope.showLineHistory",
-          "when": "!explorerResourceIsFolder && resourceScheme == file",
-          "group": "3_compare@11"
         }
       ],
       "editor/title/context": [
         {
-          "command": "diffscope.compareWith",
+          "submenu": "diffscope.file",
           "when": "resourceScheme == file",
           "group": "3_compare@10"
-        },
-        {
-          "command": "diffscope.showLineHistory",
-          "when": "resourceScheme == file",
-          "group": "3_compare@11"
         }
       ],
       "editor/context": [
         {
-          "command": "diffscope.showLineHistory",
-          "when": "resourceScheme == file",
-          "group": "9_cutcopypaste@99"
-        },
-        {
-          "command": "diffscope.compareWith",
+          "submenu": "diffscope.editor",
           "when": "resourceScheme == file",
           "group": "9_cutcopypaste@100"
         }
@@ -86,16 +129,52 @@
           "when": "resourceScheme == file"
         },
         {
-          "command": "diffscope.showLineHistory",
-          "when": "editorIsOpen && resourceScheme == file"
-        },
-        {
           "command": "diffscope.history.stop",
           "when": "diffscope.historyLoading"
         },
         {
           "command": "diffscope.history.openInNewTab",
           "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.open",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.openInNewTab",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.modePr",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.modeDirect",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.viewAsList",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.viewAsTree",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.swap",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.changedFiles.refresh",
+          "when": "false"
+        },
+        {
+          "command": "diffscope.showFileHistory",
+          "when": "editorIsOpen && resourceScheme == file"
+        },
+        {
+          "command": "diffscope.showLineHistory",
+          "when": "editorIsOpen && resourceScheme == file"
         }
       ],
       "view/title": [
@@ -103,12 +182,90 @@
           "command": "diffscope.history.stop",
           "when": "view == diffscope.history && diffscope.historyLoading",
           "group": "navigation"
+        },
+        {
+          "command": "diffscope.compareBranches",
+          "when": "view == diffscope.changedFiles",
+          "group": "navigation@1"
+        },
+        {
+          "command": "diffscope.changedFiles.modePr",
+          "when": "view == diffscope.changedFiles && diffscope.hasComparison && diffscope.compareMode == direct",
+          "group": "navigation@2"
+        },
+        {
+          "command": "diffscope.changedFiles.modeDirect",
+          "when": "view == diffscope.changedFiles && diffscope.hasComparison && diffscope.compareMode == pr",
+          "group": "navigation@2"
+        },
+        {
+          "command": "diffscope.changedFiles.swap",
+          "when": "view == diffscope.changedFiles && diffscope.hasComparison",
+          "group": "navigation@3"
+        },
+        {
+          "command": "diffscope.changedFiles.viewAsList",
+          "when": "view == diffscope.changedFiles && diffscope.changedFilesAsTree",
+          "group": "navigation@4"
+        },
+        {
+          "command": "diffscope.changedFiles.viewAsTree",
+          "when": "view == diffscope.changedFiles && !diffscope.changedFilesAsTree",
+          "group": "navigation@4"
+        },
+        {
+          "command": "diffscope.changedFiles.refresh",
+          "when": "view == diffscope.changedFiles && diffscope.hasComparison",
+          "group": "navigation@5"
         }
       ],
       "view/item/context": [
         {
           "command": "diffscope.history.openInNewTab",
           "when": "view == diffscope.history"
+        },
+        {
+          "command": "diffscope.changedFiles.openInNewTab",
+          "when": "view == diffscope.changedFiles && viewItem == changedFile"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "diffscope.compareBranches",
+          "when": "scmProvider == git",
+          "group": "navigation@100"
+        }
+      ],
+      "diffscope.editor": [
+        {
+          "command": "diffscope.compareWith",
+          "group": "1_file@1"
+        },
+        {
+          "command": "diffscope.showFileHistory",
+          "group": "1_file@2"
+        },
+        {
+          "command": "diffscope.showLineHistory",
+          "group": "1_file@3"
+        },
+        {
+          "command": "diffscope.compareBranches",
+          "group": "9_branches@1"
+        }
+      ],
+      "diffscope.file": [
+        {
+          "command": "diffscope.compareWith",
+          "group": "1_file@1"
+        },
+        {
+          "command": "diffscope.showFileHistory",
+          "group": "1_file@2"
+        },
+        {
+          "command": "diffscope.compareBranches",
+          "group": "9_branches@1"
         }
       ]
     },
@@ -126,13 +283,21 @@
         {
           "id": "diffscope.history",
           "name": "История"
+        },
+        {
+          "id": "diffscope.changedFiles",
+          "name": "Изменённые файлы"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "diffscope.history",
-        "contents": "Выделите строки в редакторе и выберите «DiffScope: Показать историю» в контекстном меню — здесь появятся коммиты, которые их меняли. Без выделения — история всего файла.\n[Показать историю](command:diffscope.showLineHistory)"
+        "contents": "Выберите в контекстном меню редактора «DiffScope → Показать историю по строкам» (выделенные строки) или «Показать историю» (весь файл) — здесь появятся коммиты.\n[Показать историю файла](command:diffscope.showFileHistory)"
+      },
+      {
+        "view": "diffscope.changedFiles",
+        "contents": "Сравните две ветки — здесь появятся отличающиеся файлы.\n[Сравнить ветки](command:diffscope.compareBranches)"
       }
     ],
     "configuration": {
@@ -142,9 +307,32 @@
           "type": "boolean",
           "default": false,
           "description": "История строк и файла: идти только по первому родителю merge-коммитов (основной ветке). Выключено — видны и коммиты влитых веток, в том числе тот, где строки появились."
+        },
+        "diffscope.branchCompare.defaultMode": {
+          "type": "string",
+          "enum": [
+            "pr",
+            "direct"
+          ],
+          "default": "pr",
+          "enumDescriptions": [
+            "Как в PR (A...B): только изменения правой стороны с момента расхождения",
+            "Прямое (A..B): все отличия двух ревизий"
+          ],
+          "description": "Сравнение веток: режим по умолчанию."
         }
       }
-    }
+    },
+    "submenus": [
+      {
+        "id": "diffscope.editor",
+        "label": "DiffScope"
+      },
+      {
+        "id": "diffscope.file",
+        "label": "DiffScope"
+      }
+    ]
   },
   "scripts": {
     "build": "npm run build:ext && npm run build:webview",

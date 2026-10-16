@@ -56,7 +56,7 @@ export class DiffSession {
     return `${name} (${revisionLabel(this.left)} ↔ ${revisionLabel(this.right)})`;
   }
 
-  handlers(): Omit<Handlers, 'saveLayout'> {
+  handlers(): Pick<Handlers, 'load' | 'pickRef' | 'swap'> {
     return {
       load: async (_params, signal) => {
         const [left, right] = await Promise.all([

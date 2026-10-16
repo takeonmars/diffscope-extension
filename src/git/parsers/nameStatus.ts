@@ -11,6 +11,38 @@ export interface ChangedFile {
   oldPath?: string;
   /** Процент сходства для переименованных и скопированных. */
   similarity?: number;
+  /** Строк добавлено / удалено (`--numstat`); у двоичного файла — нет. */
+  added?: number;
+  removed?: number;
+  binary?: boolean;
+}
+
+export interface LineStat {
+  path: string;
+  added: number;
+  removed: number;
+  binary: boolean;
+}
+
+/** `git diff --numstat -z`: «д\tу\tпуть\0»; переименование — «д\tу\t\0старый\0новый\0». */
+export function parseNumstat(output: string): LineStat[] {
+  const parts = output.split('\0');
+  const stats: LineStat[] = [];
+  for (let i = 0; i < parts.length;) {
+    const record = parts[i++];
+    if (!record) continue;
+    const [added, removed, path] = record.split('\t');
+    // Путь пустой — переименование: дальше старый и новый путь.
+    const target = path ? path : (i++, parts[i++]);
+    const binary = added === '-' || removed === '-';
+    stats.push({
+      path: target,
+      added: binary ? 0 : Number(added),
+      removed: binary ? 0 : Number(removed),
+      binary,
+    });
+  }
+  return stats;
 }
 
 const STATUS: Record<string, ChangeStatus> = {

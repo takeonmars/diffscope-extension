@@ -15,8 +15,9 @@ export type Handlers = {
 export class MessageRouter {
   private readonly running = new Map<number, AbortController>();
 
+  /** Обработчики — только тех запросов, что есть у этой вкладки; остальные — ошибка. */
   constructor(
-    private readonly handlers: Handlers,
+    private readonly handlers: Partial<Handlers>,
     private readonly post: (message: ExtensionToWebview) => void,
     private readonly onReady: () => void = () => {},
   ) {}

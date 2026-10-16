@@ -13,7 +13,7 @@ import { CancelledError, createBridge } from '../webview/src/bridge';
 const side = (label: string): DiffSide => ({ label, content: { kind: 'text', text: label } });
 const data: DiffData = { path: 'a.ts', left: side('L'), right: side('R') };
 
-function fakeHandlers(overrides: Partial<Handlers> = {}): Handlers {
+function fakeHandlers(overrides: Partial<Handlers> = {}): Partial<Handlers> {
   return {
     load: async () => data,
     pickRef: async () => ({ changed: false }),
@@ -33,7 +33,7 @@ function hanging() {
   return { state, handler };
 }
 
-function connect(handlers: Handlers = fakeHandlers()) {
+function connect(handlers: Partial<Handlers> = fakeHandlers()) {
   const toExtension: WebviewToExtension[] = [];
   const toWebview: ExtensionToWebview[] = [];
   const onReady = vi.fn();

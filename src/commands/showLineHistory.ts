@@ -1,22 +1,31 @@
-// «Показать историю»: есть выделение в редакторе — история этих строк; нет — история всего файла.
-// Из проводника или вкладки (передан файл) — история этого файла.
+// «Показать историю» — коммиты, менявшие файл; «Показать историю по строкам» — коммиты,
+// менявшие выделенные строки (без выделения — строку с курсором). Файл — из проводника или
+// вкладки (передан uri) или активного редактора.
 import * as vscode from 'vscode';
-import type { LineRange } from '../../shared/protocol';
+import { selectedLines } from '../features/selection';
 import { fileAtRevision } from '../git/content';
 import { findRepo, repoPath } from '../git/repo';
 import type { HistoryView } from '../views/historyView';
 
-export async function showLineHistory(
+export async function showHistory(
   history: HistoryView,
   log: vscode.LogOutputChannel,
+  kind: 'file' | 'lines',
   uri?: vscode.Uri,
 ): Promise<void> {
   const editor = vscode.window.activeTextEditor;
-  const fromEditor =
-    !(uri instanceof vscode.Uri) || uri.toString() === editor?.document.uri.toString();
   const target = uri instanceof vscode.Uri ? uri : editor?.document.uri;
+  // Строки берутся из редактора этого же файла.
+  const lineEditor =
+    kind === 'lines' && editor && editor.document.uri.toString() === target?.toString()
+      ? editor
+      : undefined;
   if (!target || target.scheme !== 'file') {
     void vscode.window.showWarningMessage('DiffScope: откройте или выберите файл на диске.');
+    return;
+  }
+  if (kind === 'lines' && !lineEditor) {
+    void vscode.window.showWarningMessage('DiffScope: выделите строки в редакторе файла.');
     return;
   }
   try {
@@ -32,7 +41,7 @@ export async function showLineHistory(
       path,
       headText: head.kind === 'text' ? head.text : undefined,
       currentText: await currentText(target),
-      selection: fromEditor && editor ? selectedLines(editor.selection) : undefined,
+      selection: lineEditor ? selectedLines(lineEditor.selection) : undefined,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -50,16 +59,4 @@ async function currentText(uri: vscode.Uri): Promise<string> {
   } catch {
     return ''; // файл удалён — вся история в git
   }
-}
-
-/**
- * Строки выделения с 1; undefined — выделения нет (только курсор). Конец в начале строки
- * (выделены целые строки) её не включает.
- */
-export function selectedLines(selection: vscode.Selection): LineRange | undefined {
-  if (selection.isEmpty) return undefined;
-  const from = selection.start.line + 1;
-  let to = selection.end.line + 1;
-  if (selection.end.character === 0 && selection.end.line > selection.start.line) to -= 1;
-  return { from, to };
 }

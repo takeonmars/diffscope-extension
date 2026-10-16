@@ -6,8 +6,10 @@ import { EditorView } from '@codemirror/view';
 import { fragmentHighlight, numbering, type FragmentConfig } from './fragment';
 import { attachSplitter, clampSplit, DEFAULT_SPLIT, GAP_WIDTH } from './splitter';
 import { collapseUnchanged, setCollapsed } from './collapse';
+import { alignSpacers } from './align';
 import { chunkHighlight } from './highlight';
 import {
+  alignmentPads,
   collapsedRegions,
   mapPosition,
   navigationTarget,
@@ -36,6 +38,12 @@ export interface SideBySideConfig {
   onSplitChange?: (ratio: number) => void;
   /** Текущий блок (у линии чтения или последний выбранный навигацией) изменился. */
   onCurrentChunk?: (index: number | undefined) => void;
+  /**
+   * `scroll` (по умолчанию) — колонки прокручиваются сами, прокрутка синхронизируется;
+   * `auto` — высота по содержимому, прокрутка общая (вкладка «все файлы»): колонки
+   * выравниваются пустыми вставками на неизменённых участках, меток у прокрутки нет.
+   */
+  layout?: 'scroll' | 'auto';
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -63,6 +71,7 @@ export class SideBySideDiff {
   private frame = 0;
   private readonly detachSplitter: () => void;
   private rulersDirty = true;
+  private readonly auto: boolean;
 
   constructor(parent: HTMLElement, config: SideBySideConfig) {
     const { docA, docB, chunks } = config.prepared;
@@ -80,8 +89,12 @@ export class SideBySideDiff {
     );
     this.collapsed = new Set(config.wholeFile ? [] : this.regions.map((r) => r.id));
     this.onCurrentChunk = config.onCurrentChunk;
+    this.auto = config.layout === 'auto';
+    const pads = this.auto
+      ? alignmentPads(chunks, this.regions, docA.lines, docB.lines)
+      : undefined;
 
-    this.dom = el('div', 'ds-sbs');
+    this.dom = el('div', this.auto ? 'ds-sbs ds-sbs--auto' : 'ds-sbs');
     const paneA = el('div', 'ds-sbs__pane');
     this.gap = el('div', 'ds-sbs__gap');
     const paneB = el('div', 'ds-sbs__pane');
@@ -109,7 +122,9 @@ export class SideBySideDiff {
     });
     const editor = (doc: Text, side: Side, pane: HTMLElement) => {
       const host = el('div', 'ds-sbs__editor');
-      pane.append(host, this.rulers[side]);
+      // Метки у прокрутки — только у колонок со своей прокруткой.
+      if (this.auto) pane.append(host);
+      else pane.append(host, this.rulers[side]);
       return new EditorView({
         parent: host,
         state: EditorState.create({
@@ -121,6 +136,7 @@ export class SideBySideDiff {
             config.extensions,
             chunkHighlight(side, this.chunks, doc),
             collapseUnchanged(side, this.regions, this.collapsed, (id) => this.expand(id)),
+            pads ? alignSpacers(pads[side], doc) : [],
             redraw,
           ],
         }),
@@ -129,8 +145,10 @@ export class SideBySideDiff {
     this.a = editor(docA, 'a', paneA);
     this.b = editor(docB, 'b', paneB);
 
-    this.a.scrollDOM.addEventListener('scroll', () => this.onScroll('a'), { passive: true });
-    this.b.scrollDOM.addEventListener('scroll', () => this.onScroll('b'), { passive: true });
+    if (!this.auto) {
+      this.a.scrollDOM.addEventListener('scroll', () => this.onScroll('a'), { passive: true });
+      this.b.scrollDOM.addEventListener('scroll', () => this.onScroll('b'), { passive: true });
+    }
     this.resizeObserver = new ResizeObserver(() => {
       this.rulersDirty = true;
       this.scheduleDraw();
@@ -288,12 +306,12 @@ export class SideBySideDiff {
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       this.drawRibbons();
-      if (this.rulersDirty) {
+      if (this.rulersDirty && !this.auto) {
         this.rulersDirty = false;
         this.drawRuler('a');
         this.drawRuler('b');
       }
-      this.updateCurrent();
+      if (!this.auto) this.updateCurrent();
     });
   }
 

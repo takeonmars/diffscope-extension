@@ -28,14 +28,15 @@ type Status =
   | { state: 'cancelled' }
   | { state: 'error'; message: string };
 
-export function App() {
+/** Вкладка одного файла. */
+export function App({ initialSplit = DEFAULT_SPLIT }: { initialSplit?: number }) {
   const [data, setData] = useState<DiffData>();
   const [status, setStatus] = useState<Status>({ state: 'loading', cancel: () => {} });
   const [picking, setPicking] = useState(false);
   const [mode, setMode] = useState<DiffMode>('ribbons');
   const [wholeFile, setWholeFile] = useState(false);
   const [fragmentOnly, setFragmentOnly] = useState(false);
-  const [split, setSplit] = useState(DEFAULT_SPLIT);
+  const [split, setSplit] = useState(initialSplit);
   const [summary, setSummary] = useState<DiffSummary>();
   const [current, setCurrent] = useState<number>();
   const diff = useRef<DiffController>(null);
@@ -70,9 +71,7 @@ export function App() {
   useEffect(() => {
     const off = bridge.onEvent((event) => {
       if (event.type === 'reload') load();
-      if (event.type === 'init' && event.layout) setSplit(event.layout.split);
     });
-    bridge.ready();
     load();
     return off;
   }, [load]);

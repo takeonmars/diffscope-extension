@@ -308,18 +308,32 @@ describe('changedFiles', () => {
 
   it('как в PR: только изменения ветки, переименование распознано', async () => {
     expect(sorted(await changedFiles(repo.root, 'main', 'feature', 'pr'))).toEqual([
-      { status: 'deleted', path: 'image.png' },
-      { status: 'added', path: 'new.txt' },
-      { status: 'renamed', path: 'src/main.ts', oldPath: 'src/app.ts', similarity: 100 },
+      { status: 'deleted', path: 'image.png', binary: true },
+      { status: 'added', path: 'new.txt', added: 1, removed: 0 },
+      {
+        status: 'renamed',
+        path: 'src/main.ts',
+        oldPath: 'src/app.ts',
+        similarity: 100,
+        added: 0,
+        removed: 0,
+      },
     ]);
   });
 
   it('прямое: плюс изменения main после ответвления', async () => {
     expect(sorted(await changedFiles(repo.root, 'main', 'feature', 'direct'))).toEqual([
-      { status: 'deleted', path: 'README.md' },
-      { status: 'deleted', path: 'image.png' },
-      { status: 'added', path: 'new.txt' },
-      { status: 'renamed', path: 'src/main.ts', oldPath: 'src/app.ts', similarity: 100 },
+      { status: 'deleted', path: 'README.md', added: 0, removed: 1 },
+      { status: 'deleted', path: 'image.png', binary: true },
+      { status: 'added', path: 'new.txt', added: 1, removed: 0 },
+      {
+        status: 'renamed',
+        path: 'src/main.ts',
+        oldPath: 'src/app.ts',
+        similarity: 100,
+        added: 0,
+        removed: 0,
+      },
     ]);
   });
 
@@ -329,7 +343,7 @@ describe('changedFiles', () => {
     repo.write('a.txt', 'изменено\n');
     try {
       expect(await changedFiles(repo.root, 'HEAD', undefined, 'direct')).toEqual([
-        { status: 'modified', path: 'a.txt' },
+        { status: 'modified', path: 'a.txt', added: 1, removed: 3 },
       ]);
     } finally {
       repo.git('checkout', '-q', '--', 'a.txt');

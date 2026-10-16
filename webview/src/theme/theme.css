@@ -574,3 +574,130 @@ select {
 .ds-sbs__gap:hover {
   background: color-mix(in srgb, var(--ds-focus) 8%, transparent);
 }
+
+/* «Ленты» с высотой по содержимому (вкладка «все файлы»): прокрутка общая, у колонок — только
+   горизонтальная. */
+.ds-sbs--auto {
+  height: auto;
+}
+
+.ds-sbs--auto .ds-sbs__pane,
+.ds-sbs--auto .ds-sbs__editor {
+  height: auto;
+}
+
+.ds-sbs--auto .cm-editor {
+  height: auto !important;
+}
+
+.ds-sbs--auto .cm-scroller {
+  overflow-y: hidden;
+}
+
+.ds-align-spacer {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 4px,
+    color-mix(in srgb, var(--ds-fg) 5%, transparent) 4px 5px
+  );
+}
+
+/* --- Вкладка «все файлы» --- */
+
+.multi {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.multi__note {
+  padding: 6px 12px;
+  color: var(--ds-muted);
+}
+
+.file-section {
+  border-bottom: 1px solid var(--ds-border);
+}
+
+/* Заголовок файла остаётся сверху, пока прокручивается его дифф. */
+.file-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--ds-toolbar-bg);
+  border-bottom: 1px solid var(--ds-border);
+  border-top: 1px solid var(--ds-border);
+}
+
+.file-header__toggle {
+  padding: 0 4px;
+  background: transparent;
+  color: var(--ds-muted);
+}
+
+.file-header__status {
+  flex: none;
+  width: 1.4em;
+  text-align: center;
+  font-weight: 700;
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, var(--ds-kind-modified));
+}
+
+.file-header__status--added,
+.file-header__status--copied {
+  color: var(--vscode-gitDecoration-addedResourceForeground, var(--ds-kind-inserted));
+}
+
+.file-header__status--deleted {
+  color: var(--vscode-gitDecoration-deletedResourceForeground, var(--ds-kind-deleted));
+}
+
+.file-header__status--renamed {
+  color: var(--vscode-gitDecoration-renamedResourceForeground, var(--ds-kind-inserted));
+}
+
+.file-header__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.file-header__old {
+  font-weight: normal;
+  color: var(--ds-muted);
+}
+
+.file-header__note {
+  color: var(--ds-muted);
+}
+
+.file-header__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex: none;
+}
+
+.file-body__note {
+  padding: 12px 16px;
+  color: var(--ds-muted);
+}
+
+.file-body__placeholder {
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0 19px,
+    color-mix(in srgb, var(--ds-fg) 4%, transparent) 19px 20px
+  );
+}
+
+.diff-view--auto {
+  flex: none;
+}

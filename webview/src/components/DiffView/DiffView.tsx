@@ -51,6 +51,8 @@ interface Props {
   /** Разделитель отпустили. */
   onSplitChange?: (ratio: number) => void;
   controller?: RefObject<DiffController | null>;
+  /** Высота по содержимому, прокрутка общая (вкладка «все файлы»; только «Ленты»). */
+  layout?: 'scroll' | 'auto';
   onSummary?: (summary: DiffSummary) => void;
   onCurrentChunk?: (index: number | undefined) => void;
 }
@@ -80,6 +82,7 @@ export function DiffView(props: Props) {
         lineOffset: latest.current.lineOffset,
         fragment: latest.current.fragment,
         split: latest.current.split,
+        layout: latest.current.layout,
         onSplitChange: (ratio: number) => latest.current.onSplitChange?.(ratio),
         onCurrentChunk: (index: number | undefined) => latest.current.onCurrentChunk?.(index),
       };
@@ -101,7 +104,7 @@ export function DiffView(props: Props) {
       diffRef.current = null;
       if (controller) controller.current = null;
     };
-  }, [prepared, path, mode, dark, controller, offsetKey, fragmentKey]);
+  }, [prepared, path, mode, dark, controller, offsetKey, fragmentKey, props.layout]);
 
   useEffect(() => {
     diffRef.current?.setWholeFile(wholeFile);
@@ -111,5 +114,10 @@ export function DiffView(props: Props) {
     diffRef.current?.setSplit(props.split);
   }, [props.split]);
 
-  return <div className="diff-view" ref={host} />;
+  return (
+    <div
+      className={props.layout === 'auto' ? 'diff-view diff-view--auto' : 'diff-view'}
+      ref={host}
+    />
+  );
 }

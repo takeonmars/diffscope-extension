@@ -35,6 +35,28 @@ export interface DiffData {
   fragment?: { left: LineRange; right: LineRange };
 }
 
+/** Файл во вкладке «все файлы» сравнения веток. */
+export interface MultiFile {
+  path: string;
+  /** Путь слева, если файл переименован. */
+  oldPath?: string;
+  /** added / modified / deleted / renamed / copied / typeChanged / unmerged / unknown. */
+  status: string;
+  added?: number;
+  removed?: number;
+  binary?: boolean;
+}
+
+export interface MultiData {
+  /** «main...feature». */
+  title: string;
+  left: { label: string; description?: string };
+  right: { label: string; description?: string };
+  files: MultiFile[];
+  /** У веток нет общей истории — показано прямое сравнение. */
+  noMergeBase?: boolean;
+}
+
 /** Запросы вкладки: тип → параметры и результат. */
 export interface RequestMap {
   /** Содержимое обеих сторон для текущих ревизий. */
@@ -45,6 +67,12 @@ export interface RequestMap {
   swap: { params: Record<string, never>; result: null };
   /** Запомнить раскладку для всех вкладок: доля ширины левой колонки. */
   saveLayout: { params: Layout; result: null };
+  /** Вкладка «все файлы»: список файлов сравнения. */
+  multiList: { params: Record<string, never>; result: MultiData };
+  /** Вкладка «все файлы»: содержимое обеих сторон файла (по номеру в списке). */
+  multiFile: { params: { index: number }; result: { left: DiffSide; right: DiffSide } };
+  /** Вкладка «все файлы»: открыть файл в отдельной вкладке. */
+  openFile: { params: { index: number }; result: null };
 }
 
 export type RequestType = keyof RequestMap;
@@ -69,7 +97,10 @@ export interface Layout {
 }
 
 export type ExtensionEvent =
-  | { type: 'init'; title: string; layout?: Layout }
+  /** view — какая вкладка: один файл или все файлы сравнения. */
+  | { type: 'init'; title: string; layout?: Layout; view?: 'single' | 'multi' }
+  /** Вкладка «все файлы»: прокрутить к файлу (клик в дереве). */
+  | { type: 'reveal'; index: number }
   /** Вкладка показывает другой файл или другие ревизии — загрузить заново. */
   | { type: 'reload' };
 

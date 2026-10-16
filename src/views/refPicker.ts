@@ -19,10 +19,18 @@ const SECTIONS: [Ref['kind'], string][] = [
   ['tag', 'Теги'],
 ];
 
+export interface PickOptions {
+  /** Показывать «Рабочую копию» (нет — для базы сравнения веток). По умолчанию — да. */
+  worktree?: boolean;
+  /** Подпись рабочей копии. */
+  worktreeDescription?: string;
+}
+
 export function pickRevision(
   root: string,
   title: string,
   current: Revision,
+  options: PickOptions = {},
 ): Promise<Revision | undefined> {
   const pick = vscode.window.createQuickPick<RevisionItem>();
   pick.title = title;
@@ -40,7 +48,7 @@ export function pickRevision(
     pick.items = found.length ? [separator('Найденные коммиты'), ...found, ...base] : base;
   };
 
-  void loadBase(root, current, controller.signal).then(
+  void loadBase(root, current, options, controller.signal).then(
     (items) => {
       base = items;
       pick.busy = false;
@@ -105,6 +113,7 @@ export function pickRevision(
 async function loadBase(
   root: string,
   current: Revision,
+  options: PickOptions,
   signal: AbortSignal,
 ): Promise<RevisionItem[]> {
   const [head, refs, commits] = await Promise.all([
@@ -120,13 +129,16 @@ async function loadBase(
       ? { ...item, current: true, description: `сейчас · ${item.description ?? ''}` }
       : item;
 
-  const items: RevisionItem[] = [
-    {
-      label: '$(file) Рабочая копия',
-      description: 'текущее состояние файла на диске',
-      revision: WORKTREE,
-    },
-  ];
+  const items: RevisionItem[] =
+    options.worktree === false
+      ? []
+      : [
+          {
+            label: '$(file) Рабочая копия',
+            description: options.worktreeDescription ?? 'текущее состояние файла на диске',
+            revision: WORKTREE,
+          },
+        ];
   if (head.commit) {
     items.push({
       label: '$(git-commit) HEAD',

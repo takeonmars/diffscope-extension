@@ -148,3 +148,44 @@ async function log(root: string, args: string[], signal?: AbortSignal): Promise<
   });
   return parseLog(out);
 }
+
+/** Общий предок двух ревизий; undefined — общей истории нет. */
+export async function mergeBase(
+  root: string,
+  a: string,
+  b: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const out = await gitText(['merge-base', a, b], { cwd: root, signal, okCodes: [0, 1] });
+  return out.trim() || undefined;
+}
+
+/**
+ * Ветка по умолчанию для базы сравнения: локальная ветка, на которую указывает origin/HEAD,
+ * иначе origin/<она>, иначе main / master / develop.
+ */
+export async function defaultBranch(
+  root: string,
+  refs: readonly Ref[],
+  signal?: AbortSignal,
+): Promise<Ref | undefined> {
+  const originHead = (
+    await gitText(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'], {
+      cwd: root,
+      signal,
+      okCodes: [0, 1, 128],
+    })
+  ).trim();
+  const byName = (kind: RefKind, name: string) =>
+    refs.find((r) => r.kind === kind && r.name === name);
+  if (originHead.startsWith('refs/remotes/origin/')) {
+    const name = originHead.slice('refs/remotes/origin/'.length);
+    const found = byName('branch', name) ?? byName('remote', `origin/${name}`);
+    if (found) return found;
+  }
+  for (const name of ['main', 'master', 'develop']) {
+    const found = byName('branch', name) ?? byName('remote', `origin/${name}`);
+    if (found) return found;
+  }
+  return undefined;
+}

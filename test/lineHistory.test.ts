@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { lineHistory, selectionInHead } from '../src/features/lineHistory';
 import { ownLines } from '../src/features/mergeEdits';
+import { selectedLines } from '../src/features/selection';
 import { fileAtRevision } from '../src/git/content';
 import { fileLog, parseFileLog } from '../src/git/fileLog';
 import { lineLog, parseLineLog } from '../src/git/lineLog';
@@ -424,5 +425,45 @@ describe('merge с правками при разрешении конфликт
     } finally {
       r.remove();
     }
+  });
+});
+
+describe('история одной строки (курсор без выделения)', () => {
+  let repo: TestRepo;
+
+  beforeAll(() => {
+    repo = makeRepo();
+    repo.commit('Создать', { 'f.txt': lines('a', 'b', 'c', 'd', 'e') });
+    repo.commit('Правка соседней сверху', { 'f.txt': lines('a', 'B', 'c', 'd', 'e') });
+    repo.commit('Правка соседней снизу', { 'f.txt': lines('a', 'B', 'c', 'D', 'e') });
+    repo.commit('Правка этой строки', { 'f.txt': lines('a', 'B', 'C', 'D', 'e') });
+    repo.commit('Вставка выше', { 'f.txt': lines('0', 'a', 'B', 'C', 'D', 'e') });
+  });
+
+  afterAll(() => repo.remove());
+
+  it('selectedLines: пустое выделение — строка курсора', () => {
+    const at = (line: number, character: number) => ({ line, character });
+    const sel = (a: [number, number], b: [number, number]) => ({ start: at(...a), end: at(...b) });
+    expect(selectedLines(sel([3, 2], [3, 2]))).toEqual({ from: 4, to: 4 });
+    expect(selectedLines(sel([3, 0], [3, 0]))).toEqual({ from: 4, to: 4 });
+    expect(selectedLines(sel([1, 0], [3, 0]))).toEqual({ from: 2, to: 3 });
+    expect(selectedLines(sel([1, 2], [3, 1]))).toEqual({ from: 2, to: 4 });
+  });
+
+  it('только коммиты, менявшие эту строку; соседние правки не попадают', async () => {
+    const text = lines('0', 'a', 'B', 'C', 'D', 'e');
+    const items = await lineHistory({
+      root: repo.root,
+      path: 'f.txt',
+      headText: text,
+      currentText: text,
+      selection: { from: 4, to: 4 }, // «C»
+    });
+    expect(items.map((i) => (i.kind === 'commit' ? i.commit.subject : i.kind))).toEqual([
+      'Правка этой строки',
+      'Создать',
+    ]);
+    expect(items[0].fragment).toEqual({ left: { from: 3, to: 3 }, right: { from: 3, to: 3 } });
   });
 });

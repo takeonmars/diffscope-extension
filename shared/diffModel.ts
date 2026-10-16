@@ -214,6 +214,46 @@ export function collapsedRegions(
   return regions;
 }
 
+/** Пустое место, которое добавляется в колонку перед строкой (индекс с 0; = число строк — в конце). */
+export interface AlignmentPads {
+  a: Map<number, number>;
+  b: Map<number, number>;
+}
+
+/**
+ * Выравнивание колонок при общей прокрутке (вкладка «все файлы»): внутри изменений колонки идут
+ * независимо (ленты), а на ближайшем неизменённом участке — там, где разделитель «⋯ скрыто»
+ * (или начинался бы, если раскрыт весь файл), — и в конце файла более короткая колонка
+ * добирается пустыми строками. Расхождение не копится по файлу.
+ */
+export function alignmentPads(
+  chunks: readonly LineChunk[],
+  regions: readonly CollapsedRegion[],
+  linesA: number,
+  linesB: number,
+): AlignmentPads {
+  const pads: AlignmentPads = { a: new Map(), b: new Map() };
+  const pad = (aLine: number, bLine: number, delta: number) => {
+    if (delta > 0) pads.a.set(aLine, (pads.a.get(aLine) ?? 0) + delta);
+    else if (delta < 0) pads.b.set(bLine, (pads.b.get(bLine) ?? 0) - delta);
+  };
+  let delta = 0;
+  let r = 0;
+  for (const c of chunks) {
+    for (; r < regions.length && regions[r].aFrom < c.aFrom; r++) {
+      pad(regions[r].aFrom, regions[r].bFrom, delta);
+      delta = 0;
+    }
+    delta += c.bTo - c.bFrom - (c.aTo - c.aFrom);
+  }
+  for (; r < regions.length; r++) {
+    pad(regions[r].aFrom, regions[r].bFrom, delta);
+    delta = 0;
+  }
+  pad(linesA, linesB, delta);
+  return pads;
+}
+
 export type Side = 'a' | 'b';
 
 /**

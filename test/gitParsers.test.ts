@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseBatchCheck } from '../src/git/content';
 import { LruCache } from '../src/git/cache';
 import { parseLog } from '../src/git/parsers/log';
-import { parseNameStatus } from '../src/git/parsers/nameStatus';
+import { parseNameStatus, parseNumstat } from '../src/git/parsers/nameStatus';
 import { parseRefs } from '../src/git/refs';
 
 describe('parseNameStatus', () => {
@@ -98,5 +98,16 @@ describe('LruCache', () => {
     expect([cache.get('a'), cache.get('b'), cache.get('c')]).toEqual(['1234', undefined, '1234']);
     cache.set('huge', '12345678901');
     expect(cache.get('huge')).toBeUndefined();
+  });
+});
+
+describe('parseNumstat', () => {
+  it('обычный, двоичный, переименованный', () => {
+    const out = ['3\t1\ta.ts', '-\t-\timg.png', '0\t2\t', 'old.ts', 'new.ts', ''].join('\0');
+    expect(parseNumstat(out)).toEqual([
+      { path: 'a.ts', added: 3, removed: 1, binary: false },
+      { path: 'img.png', added: 0, removed: 0, binary: true },
+      { path: 'new.ts', added: 0, removed: 2, binary: false },
+    ]);
   });
 });

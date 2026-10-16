@@ -3,6 +3,7 @@ import { Text } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import {
   buildLineChunks,
+  alignmentPads,
   collapsedRegions,
   diffStats,
   lineDiffOverride,
@@ -232,5 +233,32 @@ describe('navigationTarget', () => {
 
   it('без текущего — по положению', () => {
     expect(navigationTarget(tops, 800, -1, undefined, undefined)).toBe(3);
+  });
+});
+
+describe('alignmentPads', () => {
+  it('после блока со вставкой — пустое место слева на ближайшем неизменённом участке', () => {
+    // Слева 30 строк; на месте строк 10–11 справа 5 строк (+3); участок 16… свёрнут.
+    const chunks = [chunk(10, 12, 10, 15)];
+    const regions = collapsedRegions(chunks, 30, 4);
+    const pads = alignmentPads(chunks, regions, 30, 33);
+    expect([...pads.a]).toEqual([[16, 3]]);
+    expect([...pads.b]).toEqual([]);
+  });
+
+  it('несколько блоков: расхождение не копится, конец выравнивается', () => {
+    // −2 строки в первом блоке (справа короче), +1 во втором, участок между ними свёрнут.
+    const chunks = [chunk(2, 5, 2, 3), chunk(20, 21, 18, 20)];
+    const regions = collapsedRegions(chunks, 40, 4);
+    const pads = alignmentPads(chunks, regions, 40, 39);
+    expect([...pads.b]).toEqual([[9 - 2, 2]]);
+    // После второго блока — свёрнутый участок до конца: слева +1 перед ним.
+    expect([...pads.a]).toEqual([[25, 1]]);
+  });
+
+  it('без неизменённых участков — выравнивание в конце', () => {
+    const chunks = [chunk(0, 1, 0, 3)];
+    const pads = alignmentPads(chunks, [], 1, 3);
+    expect([...pads.a]).toEqual([[1, 2]]);
   });
 });

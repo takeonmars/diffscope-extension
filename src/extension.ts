@@ -1,18 +1,54 @@
 import * as vscode from 'vscode';
+import { compareBranches } from './commands/compareBranches';
 import { compareWith } from './commands/compareWith';
-import { showLineHistory } from './commands/showLineHistory';
+import { showHistory } from './commands/showLineHistory';
 import type { HistoryItem } from './features/lineHistory';
 import { setGitPath, setGitTrace } from './git/runner';
+import type { FileNode } from './features/fileTree';
+import type { ChangedFile } from './git/parsers/nameStatus';
+import { ChangedFilesView } from './views/changedFilesView';
 import { HistoryView } from './views/historyView';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('DiffScope', { log: true });
   const history = new HistoryView(context, log);
+  const changedFiles = new ChangedFilesView(context, log);
+  // Из контекстного меню приходит узел дерева, по клику — сам файл.
+  const fileOf = (arg: ChangedFile | FileNode) =>
+    'kind' in arg && arg.kind === 'file' ? arg.file : (arg as ChangedFile);
   context.subscriptions.push(
     log,
     history,
+    changedFiles,
+    vscode.commands.registerCommand('diffscope.compareBranches', () =>
+      compareBranches(changedFiles, log),
+    ),
+    vscode.commands.registerCommand('diffscope.changedFiles.open', (arg: ChangedFile | FileNode) =>
+      changedFiles.reveal(fileOf(arg)),
+    ),
+    vscode.commands.registerCommand(
+      'diffscope.changedFiles.openInNewTab',
+      (arg: ChangedFile | FileNode) => changedFiles.open(fileOf(arg), true),
+    ),
+    vscode.commands.registerCommand('diffscope.changedFiles.refresh', () => changedFiles.refresh()),
+    vscode.commands.registerCommand('diffscope.changedFiles.swap', () => changedFiles.swap()),
+    vscode.commands.registerCommand('diffscope.changedFiles.modePr', () =>
+      changedFiles.setMode('pr'),
+    ),
+    vscode.commands.registerCommand('diffscope.changedFiles.modeDirect', () =>
+      changedFiles.setMode('direct'),
+    ),
+    vscode.commands.registerCommand('diffscope.changedFiles.viewAsList', () =>
+      changedFiles.setTreeMode(false),
+    ),
+    vscode.commands.registerCommand('diffscope.changedFiles.viewAsTree', () =>
+      changedFiles.setTreeMode(true),
+    ),
+    vscode.commands.registerCommand('diffscope.showFileHistory', (uri?: vscode.Uri) =>
+      showHistory(history, log, 'file', uri),
+    ),
     vscode.commands.registerCommand('diffscope.showLineHistory', (uri?: vscode.Uri) =>
-      showLineHistory(history, log, uri),
+      showHistory(history, log, 'lines', uri),
     ),
     vscode.commands.registerCommand('diffscope.history.stop', () => history.stop()),
     vscode.commands.registerCommand('diffscope.history.openInNewTab', (item: HistoryItem) =>
