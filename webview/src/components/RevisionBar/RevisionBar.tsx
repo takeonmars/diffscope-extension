@@ -43,9 +43,14 @@ function RevisionButton({
       className="revision"
       onClick={onClick}
       disabled={disabled}
-      title={[side?.label, side?.description].filter(Boolean).join(' — ') || 'Выбрать ревизию'}
+      title={
+        [side?.label, side?.path && `путь: ${side.path}`, side?.description]
+          .filter(Boolean)
+          .join(' — ') || 'Выбрать ревизию'
+      }
     >
       <span className="revision__label">{side?.label ?? '…'}</span>
+      {side?.path && <span className="revision__path">был {side.path}</span>}
       {side?.description && <span className="revision__description">{side.description}</span>}
       {missing && <span className="revision__missing">нет файла</span>}
       <span className="revision__chevron" aria-hidden>

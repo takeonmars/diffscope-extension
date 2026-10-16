@@ -12,6 +12,8 @@ export type Revision =
       rev: string;
       label: string;
       description?: string;
+      /** Путь файла на этой ревизии, если он другой (файл переименован позже). */
+      path?: string;
     };
 
 export const WORKTREE: Revision = { kind: 'worktree' };

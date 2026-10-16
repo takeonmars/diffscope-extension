@@ -14,13 +14,15 @@ export async function loadSide(
   revision: Revision,
   signal: AbortSignal,
 ): Promise<DiffSide> {
+  const sidePath = revision.kind === 'rev' ? (revision.path ?? path) : path;
   const content =
     revision.kind === 'worktree'
       ? await workingCopy(uri)
-      : toSide(await fileAtRevision(root, revision.rev, path, { signal, maxSize: MAX_SIZE }));
+      : toSide(await fileAtRevision(root, revision.rev, sidePath, { signal, maxSize: MAX_SIZE }));
   return {
     label: revisionLabel(revision),
     description: revision.kind === 'rev' ? revision.description : 'текущее состояние файла',
+    path: sidePath !== path ? sidePath : undefined,
     content,
   };
 }

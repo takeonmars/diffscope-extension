@@ -15,6 +15,8 @@ export interface DiffSide {
   label: string;
   /** Подсказка: сообщение коммита, ветка. */
   description?: string;
+  /** Путь файла на этой стороне, если он не такой, как у вкладки (файл переименован). */
+  path?: string;
   content: SideContent;
 }
 

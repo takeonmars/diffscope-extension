@@ -1,8 +1,8 @@
 // «Сравнить с…»: файл из проводника, вкладки редактора или активного редактора → новая вкладка
-// диффа. Пока слева HEAD, справа рабочая копия; правило по умолчанию из плана (B.3) — этап 4.
+// диффа с ревизиями по умолчанию (features/fileCompare).
 import * as vscode from 'vscode';
 import { openDiffPanel } from '../diffPanel/diffPanel';
-import { WORKTREE } from '../diffPanel/session';
+import { defaultRevisions } from '../features/fileCompare';
 import { findRepo, repoPath } from '../git/repo';
 
 export async function compareWith(
@@ -21,13 +21,14 @@ export async function compareWith(
       void vscode.window.showWarningMessage('DiffScope: файл не в git-репозитории.');
       return;
     }
-    openDiffPanel(context, log, {
-      root: repo.root,
-      path: await repoPath(repo.root, target.fsPath),
-      uri: target,
-      left: { kind: 'rev', rev: 'HEAD', label: 'HEAD' },
-      right: WORKTREE,
-    });
+    if (repo.shallow) {
+      void vscode.window.showInformationMessage(
+        'DiffScope: репозиторий клонирован не полностью (shallow) — история обрезана.',
+      );
+    }
+    const path = await repoPath(repo.root, target.fsPath);
+    const { left, right } = await defaultRevisions(repo.root, path);
+    openDiffPanel(context, log, { root: repo.root, path, uri: target, left, right });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     log.error(`Сравнить с…: ${message}`);

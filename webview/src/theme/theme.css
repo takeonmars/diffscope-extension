@@ -525,3 +525,8 @@ select {
     color-mix(in srgb, var(--ds-fg) 6%, transparent) 4px 5px
   );
 }
+
+.revision__path {
+  flex: none;
+  color: var(--ds-kind-modified);
+}
