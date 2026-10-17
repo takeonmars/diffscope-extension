@@ -8,11 +8,13 @@ import type { FileNode } from './features/fileTree';
 import type { ChangedFile } from './git/parsers/nameStatus';
 import { ChangedFilesView } from './views/changedFilesView';
 import { HistoryView } from './views/historyView';
+import { GitLog } from './views/logView';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const log = vscode.window.createOutputChannel('DiffScope', { log: true });
   const history = new HistoryView(context, log);
   const changedFiles = new ChangedFilesView(context, log);
+  const gitLog = new GitLog(context, log);
   // Из контекстного меню приходит узел дерева, по клику — сам файл.
   const fileOf = (arg: ChangedFile | FileNode) =>
     'kind' in arg && arg.kind === 'file' ? arg.file : (arg as ChangedFile);
@@ -20,6 +22,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     log,
     history,
     changedFiles,
+    gitLog,
+    vscode.commands.registerCommand('diffscope.showLog', () => gitLog.show()),
     vscode.commands.registerCommand('diffscope.compareBranches', () =>
       compareBranches(changedFiles, log),
     ),

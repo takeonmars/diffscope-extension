@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { ExtensionEvent } from '../../shared/protocol';
 import { App } from './App';
+import { LogApp } from './log/LogApp';
 import { MultiApp } from './MultiApp';
 import { bridge } from './vscodeApi';
 
@@ -21,5 +22,6 @@ export function Root() {
 
   if (!init) return null;
   const split = init.layout?.split;
+  if (init.view === 'log') return <LogApp layout={init.layout} />;
   return init.view === 'multi' ? <MultiApp initialSplit={split} /> : <App initialSplit={split} />;
 }

@@ -701,3 +701,423 @@ select {
 .diff-view--auto {
   flex: none;
 }
+
+/* --- Окно Git Log (вкладка): коммиты с графом; раскрытый коммит; всплывающий дифф --- */
+
+.log {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.log-empty {
+  padding: 16px;
+  color: var(--ds-muted);
+}
+
+.log-handle {
+  cursor: col-resize;
+  background: var(--ds-border);
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.log-handle:hover {
+  background-color: var(--ds-focus);
+}
+
+.log-center {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.log-center__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--ds-toolbar-bg);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.log-center__header select {
+  max-width: 50%;
+}
+
+.log-center__count {
+  margin-left: auto;
+  color: var(--ds-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.log-commits {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+
+.log-commits > div {
+  position: relative;
+}
+
+.log-row,
+.log-commits__more {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  line-height: 22px;
+}
+
+.log-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 150px 76px;
+  gap: 12px;
+  padding: 0 8px 0 4px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.log-row:hover {
+  background: var(--vscode-list-hoverBackground, color-mix(in srgb, var(--ds-fg) 6%, transparent));
+}
+
+.log-row.is-selected {
+  background: var(--vscode-list-inactiveSelectionBackground, var(--ds-selection));
+}
+
+.log-commits:focus .log-row.is-selected {
+  background: var(--vscode-list-activeSelectionBackground, var(--ds-selection));
+  color: var(--vscode-list-activeSelectionForeground, var(--ds-fg));
+}
+
+.log-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-row__subject {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.log-row__author,
+.log-row__date {
+  color: var(--ds-muted);
+}
+
+.log-row__hash {
+  font-family: var(--ds-editor-font);
+  color: var(--ds-muted);
+}
+
+.log-commits__more {
+  padding: 0 8px;
+  color: var(--ds-muted);
+}
+
+/* Граф веток: цвета дорожек — как у графа Source Control VS Code. */
+.log-graph {
+  flex: none;
+  margin-right: 6px;
+  overflow: visible;
+}
+
+.log-graph__line {
+  fill: none;
+  stroke-width: 2;
+  stroke: var(--lane);
+}
+
+.log-graph__dot {
+  fill: var(--lane);
+  stroke: var(--ds-bg);
+  stroke-width: 1.5;
+}
+
+.log-graph__dot.is-merge {
+  fill: var(--ds-bg);
+  stroke: var(--lane);
+  stroke-width: 2;
+}
+
+.log-graph .c0 {
+  --lane: var(--vscode-scmGraph-foreground1, #ffb000);
+}
+.log-graph .c1 {
+  --lane: var(--vscode-scmGraph-foreground2, #dc267f);
+}
+.log-graph .c2 {
+  --lane: var(--vscode-scmGraph-foreground3, #994f00);
+}
+.log-graph .c3 {
+  --lane: var(--vscode-scmGraph-foreground4, #40b0a6);
+}
+.log-graph .c4 {
+  --lane: var(--vscode-scmGraph-foreground5, #b66dff);
+}
+.log-graph .c5 {
+  --lane: #3b8eea;
+}
+.log-graph .c6 {
+  --lane: #23d18b;
+}
+.log-graph .c7 {
+  --lane: #f14c4c;
+}
+
+/* Метки веток и тегов у коммита. */
+.log-ref {
+  flex: none;
+  margin-right: 6px;
+  padding: 0 5px;
+  line-height: 16px;
+  border-radius: 3px;
+  font-size: calc(var(--ds-font-size) - 1px);
+  border: 1px solid color-mix(in srgb, var(--ds-kind) 60%, transparent);
+  background: color-mix(in srgb, var(--ds-kind) 18%, transparent);
+  --ds-kind: var(--ds-kind-inserted);
+}
+
+.log-ref--remote {
+  --ds-kind: var(--ds-kind-modified);
+}
+
+.log-ref--tag {
+  --ds-kind: var(--vscode-charts-yellow, #d7a14a);
+}
+
+.log-ref--head {
+  --ds-kind: var(--ds-focus);
+}
+
+.log-ref.is-current {
+  font-weight: 700;
+}
+
+/* Дифф посередине. */
+.log-diff {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.log-diff--empty {
+  align-items: center;
+  justify-content: center;
+  color: var(--ds-muted);
+}
+
+.log-diff__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  background: var(--ds-toolbar-bg);
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+}
+
+.log-diff__path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.log-diff__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Раскрытый коммит: линии графа насквозь, слева дерево файлов, справа описание. */
+.log-expanded {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  border-top: 1px solid var(--ds-border);
+  border-bottom: 1px solid var(--ds-border);
+  background: color-mix(in srgb, var(--ds-fg) 3%, var(--ds-bg));
+}
+
+.log-expanded__graph {
+  flex: none;
+  margin: 0 0 0 4px;
+}
+
+.log-expanded__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.log-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: 100%;
+}
+
+.log-details__files {
+  overflow: auto;
+  padding: 4px 0;
+  border-right: 1px solid var(--ds-border);
+}
+
+.log-details__info {
+  overflow: auto;
+  padding: 8px 12px;
+}
+
+.log-details__note {
+  padding: 8px 12px;
+  color: var(--ds-muted);
+}
+
+.log-details__subject {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.log-details__body {
+  margin: 0 0 8px;
+  font-family: inherit;
+  white-space: pre-wrap;
+  color: var(--ds-fg);
+}
+
+.log-details__meta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.log-details__meta dt {
+  color: var(--ds-muted);
+}
+
+.log-details__meta dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.log-details__hash {
+  font-family: var(--ds-editor-font);
+}
+
+.log-tree__row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  padding-right: 8px;
+  text-align: left;
+  white-space: nowrap;
+  background: transparent;
+  color: var(--ds-fg);
+  border-radius: 0;
+}
+
+.log-tree__row:hover {
+  background: var(--vscode-list-hoverBackground, color-mix(in srgb, var(--ds-fg) 8%, transparent));
+}
+
+.log-tree__file.is-active {
+  background: var(--vscode-list-activeSelectionBackground, var(--ds-selection));
+  color: var(--vscode-list-activeSelectionForeground, var(--ds-fg));
+}
+
+.log-tree__folder {
+  color: var(--ds-muted);
+}
+
+.log-tree__chevron,
+.log-tree__status {
+  flex: none;
+  width: 1em;
+}
+
+.log-tree__status {
+  font-weight: 700;
+}
+
+.log-tree__name {
+  flex: none;
+}
+
+.log-tree__old {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ds-muted);
+  font-size: calc(var(--ds-font-size) - 1px);
+}
+
+.log-tree__stats {
+  flex: none;
+  margin-left: auto;
+  font-size: calc(var(--ds-font-size) - 1px);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Всплывающий дифф — поверх окна Git Log, не поверх VS Code. */
+.log-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 32px;
+  background: color-mix(in srgb, var(--ds-bg) 40%, rgba(0, 0, 0, 0.45));
+}
+
+.log-modal__window {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid var(--vscode-widget-border, var(--ds-border));
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--ds-bg);
+  box-shadow: 0 8px 32px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.35));
+}
+
+.log-modal__window > .log-diff {
+  flex: 1;
+}
+
+.log-modal__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--ds-border);
+}
+
+/* Merge-коммиты — серее, чтобы меньше бросались в глаза; метки остаются яркими. */
+.log-row.is-merge .log-row__text {
+  color: var(--ds-muted);
+}
+
+.log-row__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

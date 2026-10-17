@@ -34,3 +34,51 @@ export async function changedFiles(
       : file;
   });
 }
+
+const emptyTrees = new Map<string, Promise<string>>();
+
+/** Хеш пустого дерева (у SHA-1 и SHA-256 он разный) — «родитель» корневого коммита. */
+export function emptyTree(root: string): Promise<string> {
+  let tree = emptyTrees.get(root);
+  if (!tree) {
+    tree = gitText(['hash-object', '-t', 'tree', '--stdin'], { cwd: root, input: '' }).then((t) =>
+      t.trim(),
+    );
+    tree.catch(() => emptyTrees.delete(root));
+    emptyTrees.set(root, tree);
+  }
+  return tree;
+}
+
+/** Настоящие родители коммита (без переписывания, как в log -- путь или log -L). */
+export async function commitParents(
+  root: string,
+  hash: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const out = await gitText(['rev-list', '--parents', '-n1', hash], { cwd: root, signal });
+  return out.trim().split(' ').slice(1);
+}
+
+/**
+ * Файлы, изменённые коммитом: против первого родителя (у merge — что пришло в основную ветку),
+ * у корневого — против пустого дерева. `base` — ревизия левой стороны.
+ */
+export async function commitFiles(
+  root: string,
+  hash: string,
+  signal?: AbortSignal,
+): Promise<{ base: string; files: ChangedFile[] }> {
+  const [parent] = await commitParents(root, hash, signal);
+  const base = parent ?? (await emptyTree(root));
+  return { base, files: await changedFiles(root, base, hash, 'direct', signal) };
+}
+
+/** Сообщение коммита целиком: заголовок и тело. */
+export async function commitMessage(
+  root: string,
+  hash: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  return (await gitText(['log', '-1', '--format=%B', hash, '--'], { cwd: root, signal })).trimEnd();
+}

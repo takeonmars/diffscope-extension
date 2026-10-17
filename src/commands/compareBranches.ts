@@ -1,13 +1,12 @@
 // «Сравнить ветки»: выбор базы (слева) и того, что сравнивается (справа), → панель «Изменённые
 // файлы». По умолчанию: база — ветка по умолчанию (origin/HEAD, иначе main / master), справа —
 // текущая ветка; если текущая и есть база — рабочая копия.
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { WORKTREE, type Revision } from '../diffPanel/session';
 import type { RevRevision } from '../features/branchCompare';
 import type { CompareMode } from '../git/changes';
 import { defaultBranch, getHead, listRefs } from '../git/refs';
-import { findRepo } from '../git/repo';
+import { currentRepoRoot } from './currentRepo';
 import type { ChangedFilesView } from '../views/changedFilesView';
 import { pickRevision } from '../views/refPicker';
 
@@ -64,20 +63,4 @@ export async function compareBranches(
     log.error(`Сравнить ветки: ${message}`);
     void vscode.window.showErrorMessage(`DiffScope: ${message}`);
   }
-}
-
-/** Репозиторий активного файла, иначе первой папки рабочей области. */
-async function currentRepoRoot(): Promise<string | undefined> {
-  const file = vscode.window.activeTextEditor?.document.uri;
-  if (file?.scheme === 'file') {
-    const repo = await findRepo(file.fsPath);
-    if (repo) return repo.root;
-  }
-  for (const folder of vscode.workspace.workspaceFolders ?? []) {
-    if (folder.uri.scheme !== 'file') continue;
-    // findRepo ищет от папки файла — передаём «файл» внутри папки.
-    const repo = await findRepo(path.join(folder.uri.fsPath, '.diffscope'));
-    if (repo) return repo.root;
-  }
-  return undefined;
 }

@@ -99,6 +99,12 @@
         "title": "Показать деревом",
         "category": "DiffScope",
         "icon": "$(list-tree)"
+      },
+      {
+        "command": "diffscope.showLog",
+        "title": "Показать Git Log",
+        "category": "DiffScope",
+        "icon": "$(git-commit)"
       }
     ],
     "menus": {
@@ -234,6 +240,11 @@
           "command": "diffscope.compareBranches",
           "when": "scmProvider == git",
           "group": "navigation@100"
+        },
+        {
+          "command": "diffscope.showLog",
+          "when": "scmProvider == git",
+          "group": "navigation@99"
         }
       ],
       "diffscope.editor": [
@@ -252,6 +263,10 @@
         {
           "command": "diffscope.compareBranches",
           "group": "9_branches@1"
+        },
+        {
+          "command": "diffscope.showLog",
+          "group": "9_branches@2"
         }
       ],
       "diffscope.file": [
@@ -266,6 +281,10 @@
         {
           "command": "diffscope.compareBranches",
           "group": "9_branches@1"
+        },
+        {
+          "command": "diffscope.showLog",
+          "group": "9_branches@2"
         }
       ]
     },

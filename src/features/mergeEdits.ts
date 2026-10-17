@@ -4,7 +4,7 @@
 import type { LineRange } from '../../shared/protocol';
 import { prepareDiff } from '../../shared/diffModel';
 import { fileAtRevision } from '../git/content';
-import { gitText } from '../git/runner';
+import { commitParents } from '../git/changes';
 
 /** Строки (с 0) текста `merge`, изменённые относительно каждого из `parents`. */
 export function ownLines(merge: string, parents: readonly string[]): Set<number> {
@@ -18,16 +18,6 @@ export function ownLines(merge: string, parents: readonly string[]): Set<number>
     if (!own.size) break;
   }
   return own ?? new Set();
-}
-
-/** Настоящие родители коммита: в `log -L` и `log -- путь` они бывают переписаны. */
-export async function commitParents(
-  root: string,
-  hash: string,
-  signal?: AbortSignal,
-): Promise<string[]> {
-  const out = await gitText(['rev-list', '--parents', '-n1', hash], { cwd: root, signal });
-  return out.trim().split(' ').slice(1);
 }
 
 export interface MergeTexts {
