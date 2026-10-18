@@ -7,7 +7,9 @@ import { setGitPath, setGitTrace } from './git/runner';
 import type { FileNode } from './features/fileTree';
 import type { ChangedFile } from './git/parsers/nameStatus';
 import { ChangedFilesView } from './views/changedFilesView';
+import { onDidCloseLastTab } from './diffPanel/webviewTab';
 import { HistoryView } from './views/historyView';
+import { leaveDiffScopePanel } from './views/panel';
 import { GitLog } from './views/logView';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -23,6 +25,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     history,
     changedFiles,
     gitLog,
+    // Закрыли последнюю вкладку DiffScope, а внизу всё ещё раздел DiffScope — вернуть терминал.
+    onDidCloseLastTab(() => {
+      if (history.visible || changedFiles.visible) void leaveDiffScopePanel();
+    }),
     vscode.commands.registerCommand('diffscope.showLog', () => gitLog.show()),
     vscode.commands.registerCommand('diffscope.compareBranches', () =>
       compareBranches(changedFiles, log),

@@ -647,6 +647,16 @@ select {
   color: var(--vscode-gitDecoration-modifiedResourceForeground, var(--ds-kind-modified));
 }
 
+/* Цвет каждой буквы — своим правилом: в дереве Git Log базового класса у буквы нет. */
+.file-header__status--modified,
+.file-header__status--typeChanged {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, var(--ds-kind-modified));
+}
+
+.file-header__status--unmerged {
+  color: var(--vscode-gitDecoration-conflictingResourceForeground, var(--ds-kind-deleted));
+}
+
 .file-header__status--added,
 .file-header__status--copied {
   color: var(--vscode-gitDecoration-addedResourceForeground, var(--ds-kind-inserted));
@@ -1120,4 +1130,33 @@ select {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Имена файлов коммита — цветами git из темы, как в Source Control. */
+.log-tree__name--added,
+.log-tree__name--copied {
+  color: var(--vscode-gitDecoration-addedResourceForeground, var(--ds-kind-inserted));
+}
+
+.log-tree__name--modified,
+.log-tree__name--typeChanged {
+  color: var(--vscode-gitDecoration-modifiedResourceForeground, var(--ds-kind-modified));
+}
+
+.log-tree__name--deleted {
+  color: var(--vscode-gitDecoration-deletedResourceForeground, var(--ds-kind-deleted));
+  text-decoration: line-through;
+}
+
+.log-tree__name--renamed {
+  color: var(--vscode-gitDecoration-renamedResourceForeground, var(--ds-kind-inserted));
+}
+
+.log-tree__name--unmerged {
+  color: var(--vscode-gitDecoration-conflictingResourceForeground, var(--ds-kind-deleted));
+}
+
+/* Выбранный файл — цветом выделения списка, чтобы текст читался на фоне. */
+.log-tree__file.is-active .log-tree__name {
+  color: inherit;
 }

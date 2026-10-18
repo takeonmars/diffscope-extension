@@ -74,7 +74,9 @@ export function CommitDetails({ commit, files, message, error, active, onOpen }:
                 <span className={`log-tree__status file-header__status--${node.file.status}`}>
                   {STATUS_LETTER[node.file.status] ?? '?'}
                 </span>
-                <span className="log-tree__name">{node.name}</span>
+                <span className={`log-tree__name log-tree__name--${node.file.status}`}>
+                  {node.name}
+                </span>
                 {node.file.oldPath && <span className="log-tree__old">← {node.file.oldPath}</span>}
                 <span className="log-tree__stats">
                   {node.file.binary ? (

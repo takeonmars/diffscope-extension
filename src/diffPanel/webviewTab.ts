@@ -97,6 +97,12 @@ export interface WebviewTab {
   readonly ready: boolean;
 }
 
+/** Открытые вкладки DiffScope — чтобы знать, когда закрыта последняя. */
+const openTabs = new Set<vscode.WebviewPanel>();
+const lastTabClosed = new vscode.EventEmitter<void>();
+/** Закрыта последняя вкладка DiffScope (дифф, «все файлы», Git Log). */
+export const onDidCloseLastTab = lastTabClosed.event;
+
 /** Вкладка редактора с webview DiffScope. */
 export function createWebviewTab(
   context: vscode.ExtensionContext,
@@ -117,9 +123,12 @@ export function createWebviewTab(
   );
   const connection = connectWebview(context, log, panel.webview, options);
   let disposed = false;
+  openTabs.add(panel);
   panel.onDidDispose(() => {
     disposed = true;
     connection.dispose();
+    openTabs.delete(panel);
+    if (!openTabs.size) lastTabClosed.fire();
   });
   return {
     panel,

@@ -35,6 +35,11 @@ export class HistoryView implements vscode.TreeDataProvider<HistoryItem>, vscode
     );
   }
 
+  /** Панель показана (раздел DiffScope открыт внизу). */
+  get visible(): boolean {
+    return this.view.visible;
+  }
+
   dispose(): void {
     this.loading?.abort();
     for (const d of this.disposables) d.dispose();
