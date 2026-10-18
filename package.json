@@ -105,6 +105,12 @@
         "title": "Показать Git Log",
         "category": "DiffScope",
         "icon": "$(git-commit)"
+      },
+      {
+        "command": "diffscope.history.showCommit",
+        "title": "Посмотреть изменения",
+        "category": "DiffScope",
+        "icon": "$(diff-multiple)"
       }
     ],
     "menus": {
@@ -181,6 +187,10 @@
         {
           "command": "diffscope.showLineHistory",
           "when": "editorIsOpen && resourceScheme == file"
+        },
+        {
+          "command": "diffscope.history.showCommit",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -227,8 +237,14 @@
       ],
       "view/item/context": [
         {
+          "command": "diffscope.history.showCommit",
+          "when": "view == diffscope.history && viewItem == commit",
+          "group": "1_open@1"
+        },
+        {
           "command": "diffscope.history.openInNewTab",
-          "when": "view == diffscope.history"
+          "when": "view == diffscope.history",
+          "group": "1_open@2"
         },
         {
           "command": "diffscope.changedFiles.openInNewTab",

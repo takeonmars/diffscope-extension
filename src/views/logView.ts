@@ -5,6 +5,7 @@ import { basename, join } from 'node:path';
 import * as vscode from 'vscode';
 import type { DiffSide, LogRefs, MultiFile } from '../../shared/protocol';
 import { currentRepoRoot } from '../commands/currentRepo';
+import { showCommit } from '../commands/showCommit';
 import type { Revision } from '../diffPanel/session';
 import { loadSide } from '../diffPanel/sideContent';
 import { createWebviewTab, type WebviewTab } from '../diffPanel/webviewTab';
@@ -60,6 +61,10 @@ export class GitLog implements vscode.Disposable {
       view: 'log',
       handlers: {
         logRefs: async (_params, signal) => refsData(root, signal),
+        logOpenCommit: async ({ hash }) => {
+          await showCommit(this.context, this.log, root, hash);
+          return null;
+        },
         logCommits: async ({ ref, skip }, signal) =>
           commitLog(root, { ref, skip, limit: PAGE, signal }),
         logCommitFiles: async ({ hash }, signal) => {

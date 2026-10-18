@@ -8,6 +8,7 @@ import { openMultiPanel, type MultiPanelHandle } from '../diffPanel/multiPanel';
 import type { Revision } from '../diffPanel/session';
 import {
   compareBranches,
+  comparisonFileSet,
   comparisonTitle,
   fileRevisions,
   type Comparison,
@@ -172,12 +173,17 @@ export class ChangedFilesView
     const comparison = this.comparison;
     if (!comparison) return undefined;
     if (this.multi && !this.multi.disposed) {
-      this.multi.update(comparison);
+      this.multi.update(comparisonFileSet(comparison));
     } else {
-      this.multi = openMultiPanel(this.context, this.log, comparison, (index) => {
-        const file = this.comparison?.files[index];
-        if (file) this.open(file, false);
-      });
+      this.multi = openMultiPanel(
+        this.context,
+        this.log,
+        comparisonFileSet(comparison),
+        (index) => {
+          const file = this.comparison?.files[index];
+          if (file) this.open(file, false);
+        },
+      );
     }
     return this.multi;
   }

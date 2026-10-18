@@ -1160,3 +1160,17 @@ select {
 .log-tree__file.is-active .log-tree__name {
   color: inherit;
 }
+
+.log-details__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.log-details__head .log-details__subject {
+  flex: 1;
+}
+
+.log-details__all {
+  flex: none;
+}

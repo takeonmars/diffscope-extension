@@ -2,6 +2,7 @@
 // - как в PR (`A...B`): левая сторона — общий предок A и B, видно только то, что сделано в B;
 // - прямое (`A..B`): левая сторона — сама A, видны все отличия деревьев.
 // Правая сторона может быть рабочей копией (тогда для общего предка берётся HEAD).
+import type { FileSet } from '../diffPanel/multiPanel';
 import type { Revision } from '../diffPanel/session';
 import { WORKTREE } from '../diffPanel/session';
 import { changedFiles, type CompareMode } from '../git/changes';
@@ -74,4 +75,21 @@ export function revisionName(revision: Revision): string {
 export function comparisonTitle(c: Pick<Comparison, 'base' | 'target' | 'mode'>): string {
   const target = c.target.kind === 'worktree' ? 'рабочая копия' : c.target.label;
   return `${c.base.label}${c.mode === 'pr' ? '...' : '..'}${target}`;
+}
+
+/** Сравнение как набор файлов для вкладки «все файлы». */
+export function comparisonFileSet(c: Comparison): FileSet {
+  return {
+    root: c.root,
+    tabTitle: `Изменения: ${comparisonTitle(c)}`,
+    title: comparisonTitle(c),
+    left: { label: c.left.label, description: c.left.description },
+    right:
+      c.target.kind === 'worktree'
+        ? { label: 'Рабочая копия', description: 'текущее состояние файлов' }
+        : { label: c.target.label, description: c.target.description },
+    files: c.files,
+    revisions: (file) => fileRevisions(c, file),
+    note: c.noMergeBase ? 'У веток нет общей истории — показано прямое сравнение.' : undefined,
+  };
 }

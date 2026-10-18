@@ -53,8 +53,8 @@ export interface MultiData {
   left: { label: string; description?: string };
   right: { label: string; description?: string };
   files: MultiFile[];
-  /** У веток нет общей истории — показано прямое сравнение. */
-  noMergeBase?: boolean;
+  /** Пометка над файлами: «у веток нет общей истории…». */
+  note?: string;
 }
 
 /** Окно Git Log: ветка, удалённая ветка или тег. */
@@ -117,6 +117,8 @@ export interface RequestMap {
     /** message — сообщение коммита целиком (заголовок и тело). */
     result: { files: MultiFile[]; message: string };
   };
+  /** Окно Git Log: открыть все файлы коммита во вкладке «все файлы». */
+  logOpenCommit: { params: { hash: string }; result: null };
   /** Окно Git Log: обе стороны файла коммита (по номеру в списке файлов). */
   logFileDiff: {
     params: { hash: string; index: number };

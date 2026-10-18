@@ -173,6 +173,8 @@ export function browserStub(deliver: (message: ExtensionToWebview) => void) {
           },
           100,
         );
+      } else if (message.type === 'logOpenCommit') {
+        reply(message.id, null);
       } else if (message.type === 'logFileDiff') {
         const sample = multiSamples[message.params.index % multiSamples.length];
         const side = (label: string, text: string) => ({

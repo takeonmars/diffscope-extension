@@ -98,11 +98,7 @@ export function MultiApp({ initialSplit = DEFAULT_SPLIT }: { initialSplit?: numb
       />
       <div className="app__diff">
         <div className="multi" ref={setScroller}>
-          {data?.noMergeBase && (
-            <div className="multi__note">
-              У веток нет общей истории — показано прямое сравнение.
-            </div>
-          )}
+          {data?.note && <div className="multi__note">{data.note}</div>}
           {data?.files.map((file, index) => (
             <FileSection
               key={`${data.title}:${file.path}`}

@@ -1,8 +1,9 @@
 // Раскрытая под коммитом панель окна Git Log (как в Git Graph): слева дерево файлов коммита со
 // статусами и «+N −M» — клик открывает дифф во всплывающем окне; справа — сообщение целиком,
-// автор, дата, хеш, родители, метки.
+// автор, дата, хеш, родители, метки; «Все файлы коммита» — вкладка «все файлы».
 import { useMemo, useState } from 'react';
 import type { LogCommitInfo, MultiFile } from '../../../shared/protocol';
+import { bridge } from '../vscodeApi';
 import { formatDate } from './CommitList';
 import { buildTree, treeRows } from './fileTree';
 
@@ -94,7 +95,18 @@ export function CommitDetails({ commit, files, message, error, active, onOpen }:
         )}
       </div>
       <div className="log-details__info">
-        <div className="log-details__subject">{subject}</div>
+        <div className="log-details__head">
+          <div className="log-details__subject">{subject}</div>
+          {!!files?.length && (
+            <button
+              className="log-details__all"
+              onClick={() => void bridge.request('logOpenCommit', { hash: commit.hash }).promise}
+              title="Все файлы коммита в одной вкладке, сплошной прокруткой"
+            >
+              Все файлы коммита
+            </button>
+          )}
+        </div>
         {body.join('\n').trim() && (
           <pre className="log-details__body">{body.join('\n').trim()}</pre>
         )}

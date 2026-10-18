@@ -35,6 +35,11 @@ export class HistoryView implements vscode.TreeDataProvider<HistoryItem>, vscode
     );
   }
 
+  /** Репозиторий текущей истории. */
+  get root(): string | undefined {
+    return this.request?.root;
+  }
+
   /** Панель показана (раздел DiffScope открыт внизу). */
   get visible(): boolean {
     return this.view.visible;

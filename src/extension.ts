@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { compareBranches } from './commands/compareBranches';
 import { compareWith } from './commands/compareWith';
+import { showCommit } from './commands/showCommit';
 import { showHistory } from './commands/showLineHistory';
 import type { HistoryItem } from './features/lineHistory';
 import { setGitPath, setGitTrace } from './git/runner';
@@ -61,6 +62,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       showHistory(history, log, 'lines', uri),
     ),
     vscode.commands.registerCommand('diffscope.history.stop', () => history.stop()),
+    vscode.commands.registerCommand('diffscope.history.showCommit', (item: HistoryItem) => {
+      if (item?.kind === 'commit' && history.root) {
+        void showCommit(context, log, history.root, item.commit.hash);
+      }
+    }),
     vscode.commands.registerCommand('diffscope.history.openInNewTab', (item: HistoryItem) =>
       history.open(item, true),
     ),
